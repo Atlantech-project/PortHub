@@ -1,0 +1,3 @@
+[submodule "project-mobile"]
+	path = project-mobile
+	url = https://github.com/Atlantech-project/project-mobile.git
