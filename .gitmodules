@@ -1,3 +1,6 @@
 [submodule "project-mobile"]
 	path = project-mobile
 	url = https://github.com/Atlantech-project/project-mobile.git
+[submodule "project-ai"]
+	path = project-ai
+	url = https://github.com/Atlantech-project/project-ai.git
