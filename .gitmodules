@@ -4,3 +4,9 @@
 [submodule "project-ai"]
 	path = project-ai
 	url = https://github.com/Atlantech-project/project-ai.git
+[submodule "project-frontend"]
+	path = project-frontend
+	url = https://github.com/Atlantech-project/project-frontend.git
+[submodule "project-backend"]
+	path = project-backend
+	url = https://github.com/Atlantech-project/project-backend.git
