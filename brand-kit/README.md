@@ -1,6 +1,8 @@
 # ATLANTECH Brand Kit
 
-Everything the web dashboard and the mobile app need to look like ATLANTECH: clean logos, colours, fonts, icons and ready-made theme code.
+Everything the web dashboard, the mobile app and the UI/UX designer need to look like ATLANTECH: clean logos, colours, fonts, icons, design tokens and ready-made theme code.
+
+The brand and this kit are owned and maintained by Marwan Nabil. Each team takes its own folder; changes to the brand go through him. Version history is in [`CHANGELOG.md`](CHANGELOG.md).
 
 ![All logo variants on white, near-black, navy and transparent grounds](preview.jpg)
 
@@ -12,7 +14,7 @@ brand-kit/
 ├── flutter/        drop-in for project-mobile
 │   ├── assets/brand/       logos at 1x / 2.0x / 3.0x, launcher icon, splash images
 │   ├── fonts/              Montserrat + Inter, static 400 / 500 / 600 / 700
-│   ├── lib/brand/          AtlantechColors, AtlantechTheme, AtlantechLogo
+│   ├── lib/brand/          AtlantechTheme, AtlantechTokens (context.atl), AtlantechLogo, AtlantechColors
 │   ├── test/               atlantech_brand_test.dart, copy into test/ and run flutter test
 │   └── pubspec_brand.yaml  what to merge into pubspec.yaml
 ├── web/brand/      drop-in for project-frontend (Vue)
@@ -22,8 +24,24 @@ brand-kit/
 │   ├── tokens.js               the same values for charts and canvas
 │   ├── AtlantechLogo.vue       logo component, primary logo by default
 │   └── specimen.html           open it in a browser to see the whole kit
-└── tools/          the scripts that rebuild all of this from the Visual Identity files
+├── design/         for the UI/UX designer (sent as a zip, see below)
+│   ├── tokens/atlantech.tokens.json   every token, importable into Figma
+│   ├── TOKENS.md                      token table with Figma, CSS and Flutter names
+│   ├── swatches/  reference/          palette (.ase, .png) and light / dark renders
+│   └── README.md                      the designer's guide
+├── tools/          rebuild, check and package scripts
+└── CHANGELOG.md    one entry per version sent out
 ```
+
+## Who takes what
+
+| Team | Gets | How |
+|---|---|---|
+| Mobile (Flutter) | `flutter/` | Copies it into project-mobile |
+| Frontend (Vue) | `web/brand/` | Copies it into project-frontend |
+| UI/UX | `ATLANTECH-Design-Kit-<version>.zip` | Sent by the brand owner, built with `tools/package_design_kit.py` |
+
+Everyone works from the same token names: `color/surface-2` in Figma is `--atl-surface-2` on the web and `context.atl.surface2` in Flutter. [`design/TOKENS.md`](design/TOKENS.md) lists every token under all three names.
 
 ## Why the logos were rebuilt
 
@@ -101,7 +119,7 @@ dart run flutter_launcher_icons
 dart run flutter_native_splash:create
 ```
 
-Colours are on `AtlantechColors` (`AtlantechColors.deepNavy` and so on) if you need them outside the theme.
+Design tokens are on the theme under the designer's names: `context.atl.surface2`, `context.atl.textMuted`, `context.atl.warning` and so on. When a mockup says `color/surface-2`, that's `context.atl.surface2`. The raw brand palette is on `AtlantechColors` (`AtlantechColors.deepNavy` and so on).
 
 ## Using it on the web (project-frontend)
 
@@ -150,9 +168,19 @@ import AtlantechLogo from '@/brand/AtlantechLogo.vue'
 
 **Light / dark.** The tokens follow the operating system. To force one, set `<html data-theme="light">` or `data-theme="dark">`.
 
-## Rebuilding
+## Maintaining the kit (brand owner)
 
-If the designer updates the logo, rerun the scripts in `tools/` against the Visual Identity folder (Python 3 with Pillow, NumPy and fontTools):
+The token values live in four places: `design/tokens/atlantech.tokens.json`, `web/brand/css/tokens.css`, `web/brand/tokens.js` and `flutter/lib/brand/` (`atlantech_tokens.dart`, the type scale in `atlantech_theme.dart`, the palette in `atlantech_colors.dart`). To change a value:
+
+1. Edit it in all four places.
+2. Run `python tools/check_tokens.py`. It lists anything that disagrees, down to a single hex value or font size.
+3. Add an entry at the top of `CHANGELOG.md` with the new version number.
+4. Run `python tools/package_design_kit.py <folder>` to build the designer's zip. It refuses to package while anything is out of sync.
+5. Commit, then tell the Flutter and frontend developers to copy their folders again, and send the designer the new zip.
+
+## Rebuilding the logos
+
+If the logo artwork itself changes, rerun the scripts in `tools/` against the Visual Identity folder (Python 3 with Pillow, NumPy and fontTools):
 
 ```bash
 python tools/build_logos.py "<Visual Identity>" out/logos

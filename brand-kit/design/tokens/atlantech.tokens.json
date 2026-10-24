@@ -1,0 +1,121 @@
+{
+  "palette": {
+    "palette": {
+      "deep-navy": { "$value": "#083A4F", "$type": "color", "$description": "Identity. Trust, stability. Primary brand colour." },
+      "muted-gold": { "$value": "#A58D66", "$type": "color", "$description": "Identity. Value, progress. Accents and dividers; 2.9:1 on paper, so not for text." },
+      "light-teal": { "$value": "#C0D5D6", "$type": "color", "$description": "Identity. Clarity, balance. Soft fills, selected states." },
+      "mid-teal": { "$value": "#407E8C", "$type": "color", "$description": "Identity. Innovation, growth. Links and focus; 4.2:1 on paper, so 18px+ or underlined." },
+      "off-white": { "$value": "#E5E1DD", "$type": "color", "$description": "Identity. Simplicity, focus. Text on navy, quiet backgrounds." }
+    }
+  },
+  "base": {
+    "font": {
+      "display": { "$value": "Montserrat", "$type": "fontFamily", "$description": "Headings, titles and numbers that matter" },
+      "body": { "$value": "Inter", "$type": "fontFamily", "$description": "Everything people read" }
+    },
+    "weight": {
+      "regular": { "$value": 400, "$type": "fontWeight" },
+      "medium": { "$value": 500, "$type": "fontWeight" },
+      "semibold": { "$value": 600, "$type": "fontWeight" },
+      "bold": { "$value": 700, "$type": "fontWeight" }
+    },
+    "type": {
+      "display-large": { "$type": "typography", "$value": { "fontFamily": "{font.display}", "fontWeight": "{weight.bold}", "fontSize": "57px", "lineHeight": "64px", "letterSpacing": "-0.25px" } },
+      "display-medium": { "$type": "typography", "$value": { "fontFamily": "{font.display}", "fontWeight": "{weight.bold}", "fontSize": "45px", "lineHeight": "52px", "letterSpacing": "0px" } },
+      "display-small": { "$type": "typography", "$value": { "fontFamily": "{font.display}", "fontWeight": "{weight.semibold}", "fontSize": "36px", "lineHeight": "44px", "letterSpacing": "0px" } },
+      "headline-large": { "$type": "typography", "$value": { "fontFamily": "{font.display}", "fontWeight": "{weight.semibold}", "fontSize": "32px", "lineHeight": "40px", "letterSpacing": "0px" } },
+      "headline-medium": { "$type": "typography", "$value": { "fontFamily": "{font.display}", "fontWeight": "{weight.semibold}", "fontSize": "28px", "lineHeight": "36px", "letterSpacing": "0px" } },
+      "headline-small": { "$type": "typography", "$value": { "fontFamily": "{font.display}", "fontWeight": "{weight.semibold}", "fontSize": "24px", "lineHeight": "32px", "letterSpacing": "0px" } },
+      "title-large": { "$type": "typography", "$value": { "fontFamily": "{font.display}", "fontWeight": "{weight.semibold}", "fontSize": "22px", "lineHeight": "28px", "letterSpacing": "0px" } },
+      "title-medium": { "$type": "typography", "$value": { "fontFamily": "{font.body}", "fontWeight": "{weight.semibold}", "fontSize": "16px", "lineHeight": "24px", "letterSpacing": "0.1px" } },
+      "title-small": { "$type": "typography", "$value": { "fontFamily": "{font.body}", "fontWeight": "{weight.semibold}", "fontSize": "14px", "lineHeight": "20px", "letterSpacing": "0.1px" } },
+      "body-large": { "$type": "typography", "$value": { "fontFamily": "{font.body}", "fontWeight": "{weight.regular}", "fontSize": "16px", "lineHeight": "24px", "letterSpacing": "0.15px" } },
+      "body-medium": { "$type": "typography", "$value": { "fontFamily": "{font.body}", "fontWeight": "{weight.regular}", "fontSize": "14px", "lineHeight": "20px", "letterSpacing": "0.25px" } },
+      "body-small": { "$type": "typography", "$value": { "fontFamily": "{font.body}", "fontWeight": "{weight.regular}", "fontSize": "12px", "lineHeight": "16px", "letterSpacing": "0.4px" } },
+      "label-large": { "$type": "typography", "$value": { "fontFamily": "{font.body}", "fontWeight": "{weight.semibold}", "fontSize": "14px", "lineHeight": "20px", "letterSpacing": "0.1px" } },
+      "label-medium": { "$type": "typography", "$value": { "fontFamily": "{font.body}", "fontWeight": "{weight.medium}", "fontSize": "12px", "lineHeight": "16px", "letterSpacing": "0.5px" } },
+      "label-small": { "$type": "typography", "$value": { "fontFamily": "{font.body}", "fontWeight": "{weight.medium}", "fontSize": "11px", "lineHeight": "16px", "letterSpacing": "0.5px" } }
+    },
+    "radius": {
+      "sm": { "$value": "8px", "$type": "dimension", "$description": "Chips, small controls" },
+      "md": { "$value": "12px", "$type": "dimension", "$description": "Buttons, inputs, default" },
+      "lg": { "$value": "16px", "$type": "dimension", "$description": "Cards, sheets" }
+    },
+    "space": {
+      "1": { "$value": "4px", "$type": "dimension" },
+      "2": { "$value": "8px", "$type": "dimension" },
+      "3": { "$value": "12px", "$type": "dimension" },
+      "4": { "$value": "16px", "$type": "dimension" },
+      "6": { "$value": "24px", "$type": "dimension" },
+      "8": { "$value": "32px", "$type": "dimension" },
+      "12": { "$value": "48px", "$type": "dimension" }
+    }
+  },
+  "light": {
+    "color": {
+      "bg": { "$value": "#F7F5F2", "$type": "color", "$description": "Page background (paper)" },
+      "surface": { "$value": "#FFFFFF", "$type": "color", "$description": "Cards, inputs" },
+      "surface-2": { "$value": "#F2EFEB", "$type": "color", "$description": "Raised or grouped areas" },
+      "surface-3": { "$value": "{palette.off-white}", "$type": "color", "$description": "Strongest neutral fill" },
+      "text": { "$value": "#0F2A36", "$type": "color", "$description": "Body and headings (ink)" },
+      "text-muted": { "$value": "#4B5F68", "$type": "color", "$description": "Metadata, helper text" },
+      "border": { "$value": "#D3DEDF", "$type": "color" },
+      "border-strong": { "$value": "#8FA3AA", "$type": "color", "$description": "Input outlines, outlined buttons" },
+      "primary": { "$value": "{palette.deep-navy}", "$type": "color", "$description": "Main buttons, key actions" },
+      "on-primary": { "$value": "{palette.off-white}", "$type": "color" },
+      "primary-soft": { "$value": "{palette.light-teal}", "$type": "color", "$description": "Selected states, soft fills" },
+      "accent": { "$value": "{palette.muted-gold}", "$type": "color", "$description": "Decoration only" },
+      "accent-text": { "$value": "#7A6440", "$type": "color", "$description": "Gold when it must be text" },
+      "link": { "$value": "{palette.mid-teal}", "$type": "color" },
+      "focus": { "$value": "{palette.mid-teal}", "$type": "color" },
+      "header-bg": { "$value": "{palette.deep-navy}", "$type": "color" },
+      "header-text": { "$value": "{palette.off-white}", "$type": "color" },
+      "success": { "$value": "#2E7D5B", "$type": "color" },
+      "warning": { "$value": "#8A5C0F", "$type": "color" },
+      "danger": { "$value": "#B3412F", "$type": "color" },
+      "logo-card": { "$value": "#00000000", "$type": "color", "$description": "No card behind the primary logo in light mode" }
+    }
+  },
+  "dark": {
+    "color": {
+      "bg": { "$value": "#04222F", "$type": "color", "$description": "Page background (abyss)" },
+      "surface": { "$value": "#072B3A", "$type": "color", "$description": "Cards, inputs" },
+      "surface-2": { "$value": "#0B3446", "$type": "color", "$description": "Raised or grouped areas" },
+      "surface-3": { "$value": "#103D51", "$type": "color", "$description": "Strongest neutral fill" },
+      "text": { "$value": "{palette.off-white}", "$type": "color" },
+      "text-muted": { "$value": "#A9BEC3", "$type": "color" },
+      "border": { "$value": "#1E4A5B", "$type": "color" },
+      "border-strong": { "$value": "#5F7F89", "$type": "color" },
+      "primary": { "$value": "{palette.light-teal}", "$type": "color" },
+      "on-primary": { "$value": "{palette.deep-navy}", "$type": "color" },
+      "primary-soft": { "$value": "#1C5466", "$type": "color" },
+      "accent": { "$value": "#C2A77B", "$type": "color", "$description": "Gold lifted for dark grounds" },
+      "accent-text": { "$value": "#C2A77B", "$type": "color" },
+      "link": { "$value": "#7FB4BF", "$type": "color" },
+      "focus": { "$value": "#7FB4BF", "$type": "color" },
+      "header-bg": { "$value": "#0B3446", "$type": "color" },
+      "header-text": { "$value": "{palette.off-white}", "$type": "color" },
+      "success": { "$value": "#7CC9A4", "$type": "color" },
+      "warning": { "$value": "#E3B766", "$type": "color" },
+      "danger": { "$value": "#F2A493", "$type": "color" },
+      "logo-card": { "$value": "#F7F5F2", "$type": "color", "$description": "Paper card behind the primary logo on dark" }
+    }
+  },
+  "$themes": [
+    {
+      "id": "atlantech-light",
+      "name": "Light",
+      "group": "ATLANTECH",
+      "selectedTokenSets": { "palette": "enabled", "base": "enabled", "light": "enabled" }
+    },
+    {
+      "id": "atlantech-dark",
+      "name": "Dark",
+      "group": "ATLANTECH",
+      "selectedTokenSets": { "palette": "enabled", "base": "enabled", "dark": "enabled" }
+    }
+  ],
+  "$metadata": {
+    "tokenSetOrder": ["palette", "base", "light", "dark"]
+  }
+}

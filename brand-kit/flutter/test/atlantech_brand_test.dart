@@ -31,4 +31,15 @@ void main() {
     await tester.pumpWidget(app(AtlantechTheme.dark, const AtlantechLogo(tone: AtlantechLogoTone.auto, height: 80)));
     expect((tester.widget<Image>(find.byType(Image)).image as AssetImage).assetName, 'assets/brand/lockup_reversed.png');
   });
+
+  testWidgets('designer token names are on the theme and drive cards', (tester) async {
+    late AtlantechTokens light, dark;
+    await tester.pumpWidget(app(AtlantechTheme.light, Builder(builder: (c) { light = c.atl; return const SizedBox(); })));
+    await tester.pumpWidget(app(AtlantechTheme.dark, Builder(builder: (c) { dark = c.atl; return const SizedBox(); })));
+    await tester.pumpAndSettle();
+    expect(light.surface, const Color(0xFFFFFFFF));
+    expect(dark.surface, const Color(0xFF072B3A));
+    expect(AtlantechTheme.light.cardTheme.color, AtlantechTokens.light.surface);
+    expect(AtlantechTheme.dark.scaffoldBackgroundColor, AtlantechTokens.dark.bg);
+  });
 }

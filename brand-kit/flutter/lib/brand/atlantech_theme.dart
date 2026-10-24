@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'atlantech_colors.dart';
+import 'atlantech_tokens.dart';
 
 /// Material 3 themes built on the ATLANTECH identity.
 ///
@@ -118,6 +119,7 @@ abstract final class AtlantechTheme {
 
   static ThemeData _build(ColorScheme s) {
     final light = s.brightness == Brightness.light;
+    final t = light ? AtlantechTokens.light : AtlantechTokens.dark;
     final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(_radius));
 
     return ThemeData(
@@ -125,10 +127,11 @@ abstract final class AtlantechTheme {
       colorScheme: s,
       fontFamily: bodyFont,
       textTheme: _textTheme(s.onSurface),
-      scaffoldBackgroundColor: s.surface,
+      extensions: [t],
+      scaffoldBackgroundColor: t.bg,
       appBarTheme: AppBarTheme(
-        backgroundColor: light ? AtlantechColors.deepNavy : s.surfaceContainer,
-        foregroundColor: AtlantechColors.offWhite,
+        backgroundColor: t.headerBg,
+        foregroundColor: t.headerText,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: const TextStyle(
@@ -139,12 +142,12 @@ abstract final class AtlantechTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: s.surfaceContainerLow,
+        color: t.surface,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(_radius + 4),
-          side: BorderSide(color: s.outlineVariant),
+          side: BorderSide(color: t.border),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -164,7 +167,7 @@ abstract final class AtlantechTheme {
       textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(shape: shape)),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: s.surfaceContainerLowest,
+        fillColor: t.surface,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(_radius)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_radius),
