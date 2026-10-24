@@ -156,5 +156,12 @@ Deep Navy for trust, Muted Gold for value, the two teals for clarity and growth,
 <img src=".github/assets/wave.svg" width="100%" alt="">
 
 <p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/symbol-dark.png">
+    <img src=".github/assets/symbol-light.png" alt="" width="56">
+  </picture>
+</p>
+
+<p align="center">
   <sub>Mansoura University &middot; Faculty of Computers and Information &middot; Graduation Project 2026</sub>
 </p>
