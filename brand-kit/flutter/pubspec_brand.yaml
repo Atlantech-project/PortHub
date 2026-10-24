@@ -1,0 +1,54 @@
+# Merge these sections into the app's pubspec.yaml.
+# Copy flutter/assets/brand -> <app>/assets/brand and flutter/fonts -> <app>/fonts first.
+
+flutter:
+  uses-material-design: true
+
+  # Flutter picks the 2.0x / 3.0x files automatically for the device's pixel ratio.
+  assets:
+    - assets/brand/
+
+  fonts:
+    - family: Montserrat
+      fonts:
+        - asset: fonts/Montserrat-Regular.ttf
+        - asset: fonts/Montserrat-Medium.ttf
+          weight: 500
+        - asset: fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: fonts/Montserrat-Bold.ttf
+          weight: 700
+    - family: Inter
+      fonts:
+        - asset: fonts/Inter-Regular.ttf
+        - asset: fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: fonts/Inter-Bold.ttf
+          weight: 700
+
+# ---------------------------------------------------------------------------
+# Optional: app icon and splash screen generated from the brand assets.
+#   flutter pub add dev:flutter_launcher_icons dev:flutter_native_splash
+#   dart run flutter_launcher_icons
+#   dart run flutter_native_splash:create
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/brand/launcher/app_icon.png
+  adaptive_icon_background: "#083A4F"
+  adaptive_icon_foreground: assets/brand/launcher/app_icon_foreground.png
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#F7F5F2"
+  image: assets/brand/launcher/splash_light.png
+  color_dark: "#04222F"
+  image_dark: assets/brand/launcher/splash_dark.png
+  android_12:
+    color: "#F7F5F2"
+    image: assets/brand/launcher/splash_light.png
+    color_dark: "#04222F"
+    image_dark: assets/brand/launcher/splash_dark.png

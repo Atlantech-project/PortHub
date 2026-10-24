@@ -1,0 +1,43 @@
+/*
+ * ATLANTECH theme for Tailwind CSS v4.
+ *   @import "tailwindcss";
+ *   @import "./brand/css/tokens.css";
+ *   @import "./brand/css/tailwind-theme.css";
+ *
+ * Gives you: bg-navy, text-gold, border-teal-light, bg-surface, text-muted,
+ * font-display, font-sans, rounded-brand ... all following light/dark tokens.
+ */
+
+@theme {
+  --color-navy: #083a4f;
+  --color-gold: #a58d66;
+  --color-teal-light: #c0d5d6;
+  --color-teal: #407e8c;
+  --color-offwhite: #e5e1dd;
+
+  --font-display: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-brand: 12px;
+}
+
+/* Semantic colours read the runtime tokens, so they switch with the theme */
+@theme inline {
+  --color-bg: var(--atl-bg);
+  --color-surface: var(--atl-surface);
+  --color-surface-2: var(--atl-surface-2);
+  --color-surface-3: var(--atl-surface-3);
+  --color-text: var(--atl-text);
+  --color-muted: var(--atl-text-muted);
+  --color-line: var(--atl-border);
+  --color-line-strong: var(--atl-border-strong);
+  --color-primary: var(--atl-primary);
+  --color-on-primary: var(--atl-on-primary);
+  --color-primary-soft: var(--atl-primary-soft);
+  --color-accent: var(--atl-accent);
+  --color-accent-text: var(--atl-accent-text);
+  --color-link: var(--atl-link);
+  --color-success: var(--atl-success);
+  --color-warning: var(--atl-warning);
+  --color-danger: var(--atl-danger);
+}

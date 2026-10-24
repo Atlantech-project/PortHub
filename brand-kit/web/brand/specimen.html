@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATLANTECH Brand Specimen</title>
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="icon" href="icons/favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="icons/site.webmanifest">
+<meta name="theme-color" content="#083A4F">
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px 64px; }
+  header { background: var(--atl-header-bg); color: var(--atl-header-text); }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; padding-bottom: 16px; }
+  header img { height: 40px; }
+  .toggle { font: 600 13px var(--atl-font-body); color: inherit; background: transparent; border: 1px solid currentColor; border-radius: var(--atl-radius-sm); padding: 8px 14px; cursor: pointer; }
+  .hero { padding: 56px 0 24px; text-align: center; }
+  .hero img { width: min(420px, 80%); background: var(--atl-logo-card); padding: calc(var(--atl-logo-card-pad) * 3); border-radius: var(--atl-radius-lg); }
+  .tagline { color: var(--atl-accent-text); letter-spacing: .3em; text-transform: uppercase; font-size: 12px; font-weight: 600; margin-top: 8px; }
+  h2 { font-size: 22px; margin: 48px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--atl-border); }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .swatch { border-radius: var(--atl-radius); overflow: hidden; border: 1px solid var(--atl-border); background: var(--atl-surface); }
+  .swatch div { height: 88px; }
+  .swatch p { margin: 0; padding: 10px 12px; font-size: 13px; }
+  .swatch b { display: block; font-family: var(--atl-font-display); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  .swatch span { color: var(--atl-text-muted); font-family: var(--atl-font-mono); }
+  .tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  .tile { border-radius: var(--atl-radius); height: 150px; display: grid; place-items: center; border: 1px solid var(--atl-border); }
+  .tile img { max-width: 75%; max-height: 70%; }
+  .t-white { background: #fff; } .t-paper { background: #f7f5f2; } .t-navy { background: #083a4f; } .t-night { background: #0d1117; }
+  .t-photo { background: linear-gradient(135deg, #407e8c, #083a4f 60%, #a58d66); }
+  .type .d { font-family: var(--atl-font-display); }
+  .type p { margin: 6px 0; }
+  .card { background: var(--atl-surface); border: 1px solid var(--atl-border); border-radius: var(--atl-radius-lg); padding: 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn { font: 600 14px var(--atl-font-body); border-radius: var(--atl-radius); padding: 12px 22px; border: 1px solid transparent; cursor: pointer; }
+  .btn-primary { background: var(--atl-primary); color: var(--atl-on-primary); }
+  .btn-outline { background: transparent; color: var(--atl-text); border-color: var(--atl-border-strong); }
+  .pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; }
+  a { color: var(--atl-link); }
+  footer { color: var(--atl-text-muted); font-size: 13px; text-align: center; margin-top: 64px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <img src="logos/atlantech-wordmark-reversed.png" alt="ATLANTECH">
+    <button class="toggle" id="toggle" type="button">Switch theme</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <img src="logos/atlantech-lockup-color.png" alt="ATLANTECH, Intelligent Port Operations">
+    <p class="tagline">Smarter coordination. Stronger ports.</p>
+  </section>
+
+  <h2>Palette</h2>
+  <div class="grid">
+    <div class="swatch"><div style="background:#083a4f"></div><p><b>Deep Navy</b><span>#083A4F</span></p></div>
+    <div class="swatch"><div style="background:#a58d66"></div><p><b>Muted Gold</b><span>#A58D66</span></p></div>
+    <div class="swatch"><div style="background:#c0d5d6"></div><p><b>Light Teal</b><span>#C0D5D6</span></p></div>
+    <div class="swatch"><div style="background:#407e8c"></div><p><b>Mid Teal</b><span>#407E8C</span></p></div>
+    <div class="swatch"><div style="background:#e5e1dd"></div><p><b>Off-White</b><span>#E5E1DD</span></p></div>
+  </div>
+
+  <h2>Logo on every ground</h2>
+  <div class="tiles">
+    <div class="tile t-white"><img src="logos/atlantech-lockup-color.png" alt="colour on white"></div>
+    <div class="tile t-paper"><img src="logos/atlantech-lockup-mono-navy.png" alt="mono navy on paper"></div>
+    <div class="tile t-navy"><img src="logos/atlantech-lockup-reversed.png" alt="reversed on navy"></div>
+    <div class="tile t-night"><img src="logos/atlantech-lockup-reversed.png" alt="reversed on near black"></div>
+    <div class="tile t-photo"><img src="logos/atlantech-lockup-mono-white.png" alt="mono white on image"></div>
+    <div class="tile t-navy"><img src="logos/atlantech-symbol-reversed.png" alt="symbol reversed"></div>
+  </div>
+
+  <h2>Type</h2>
+  <div class="type card">
+    <p class="d" style="font-size:44px;font-weight:700;line-height:1.1">Berth 14 is clear at 06:40</p>
+    <p class="d" style="font-size:24px;font-weight:600">Montserrat for headings and numbers that matter</p>
+    <p style="font-size:16px">Inter for everything you read. The tide window opens at 05:10 and closes at 08:25, with under-keel clearance of 1.2 m at the shallowest point.</p>
+    <p style="font-size:13px;color:var(--atl-text-muted)">Muted text for metadata: updated 2 minutes ago by the Marine Safety Officer.</p>
+  </div>
+
+  <h2>Components</h2>
+  <div class="card">
+    <div class="row">
+      <button class="btn btn-primary" type="button">Confirm plan</button>
+      <button class="btn btn-outline" type="button">Override berth</button>
+      <a href="#">View rationale</a>
+      <span class="pill" style="color:var(--atl-success)">On schedule</span>
+      <span class="pill" style="color:var(--atl-warning)">Delay risk</span>
+      <span class="pill" style="color:var(--atl-danger)">No feasible plan</span>
+    </div>
+  </div>
+
+  <footer>ATLANTECH, Intelligent Port Operations</footer>
+</main>
+
+<script>
+  const root = document.documentElement;
+  document.getElementById('toggle').addEventListener('click', () => {
+    const dark = root.dataset.theme
+      ? root.dataset.theme === 'dark'
+      : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+  });
+</script>
+</body>
+</html>

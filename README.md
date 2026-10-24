@@ -145,6 +145,19 @@ git push --recurse-submodules=check
 | UI/UX | Menna-Allah Maged Nabil Mohamed | UI/UX Designer |
 | BA / QA | Mahmoud Wageh Mohamed El-Sayed | Business Analyst, QA Tester |
 
+## Brand kit
+
+Everything you need to make a screen look like ATLANTECH lives in [`brand-kit/`](brand-kit): clean transparent logos, colours, fonts, icons and ready-made theme code. Each app team takes its own folder and copies it into its repository.
+
+| Team | Take this | What you get |
+|---|---|---|
+| Mobile (Flutter) | [`brand-kit/flutter`](brand-kit/flutter) | Material 3 light and dark themes, an `AtlantechLogo` widget, 1x / 2x / 3x logos, bundled fonts, app icon and splash images |
+| Frontend (Vue) | [`brand-kit/web/brand`](brand-kit/web/brand) | CSS tokens for light and dark, a Tailwind v4 theme, an `AtlantechLogo.vue` component, favicons, bundled fonts |
+
+Step-by-step setup is in the [brand kit README](brand-kit/README.md). Open [`specimen.html`](brand-kit/web/brand/specimen.html) in a browser to see the whole kit in one page.
+
+The full-colour logo is the main logo. On dark backgrounds it sits on a paper card instead of being swapped for a light version, and both components do that for you.
+
 ## Our colours
 
 <p align="center">
