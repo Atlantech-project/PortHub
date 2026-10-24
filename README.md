@@ -153,6 +153,9 @@ Everything you need to make a screen look like ATLANTECH lives in [`brand-kit/`]
 |---|---|---|
 | Mobile (Flutter) | [`brand-kit/flutter`](brand-kit/flutter) | Material 3 light and dark themes, an `AtlantechLogo` widget, 1x / 2x / 3x logos, bundled fonts, app icon and splash images |
 | Frontend (Vue) | [`brand-kit/web/brand`](brand-kit/web/brand) | CSS tokens for light and dark, a Tailwind v4 theme, an `AtlantechLogo.vue` component, favicons, bundled fonts |
+| UI/UX | the design kit zip, from the brand owner | Figma-ready design tokens, logos, fonts, swatches and a guide (source in [`brand-kit/design`](brand-kit/design)) |
+
+All three use the same token names, so a `color/surface-2` in a mockup is `--atl-surface-2` on the web and `context.atl.surface2` in Flutter. The brand is owned and maintained by Marwan Nabil, and changes to it go through him.
 
 Step-by-step setup is in the [brand kit README](brand-kit/README.md). Open [`specimen.html`](brand-kit/web/brand/specimen.html) in a browser to see the whole kit in one page.
 

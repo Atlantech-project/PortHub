@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'atlantech_colors.dart';
+import 'atlantech_tokens.dart';
 
 enum AtlantechLogoShape { lockup, symbol, wordmark }
 
@@ -78,7 +78,7 @@ class AtlantechLogo extends StatelessWidget {
     final pad = (height ?? width ?? 48) * 0.14;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AtlantechColors.paper,
+        color: context.atl.logoCard,
         borderRadius: BorderRadius.circular(pad * 1.2),
       ),
       child: Padding(padding: EdgeInsets.all(pad), child: image),
