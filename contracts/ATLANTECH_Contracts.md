@@ -743,7 +743,7 @@ All commit logic for `container` / `container_manifest_entry` / `vessel` stays i
 
 **`vessel` rows:** the worker fills only NULL `call_sign` and `flag_state`; it never overwrites a value. `imo_number` mismatch → ERROR; `name` mismatch → WARNING. Filled columns are listed in `result_detail.vessel_fields_filled`.
 
-**Performance:** no size classes in this contract (NFR-PERF-2 removed at the AI Team's request; pending Leads Council sign-off).
+**Performance:** no size classes in this contract. NFR-PERF-2 is removed from the MVP (Leads Council, 2026-10-27).
 
 **Impact on other contracts:** CT-17 adds `baplie_parse_run`. CT-13 / DEC-03: BAPLIE correction validation runs on the worker through `source = STAGED_PAYLOAD`. CT-14: C-06 for BAPLIE carries `outcome` = `PARSED` · `QUARANTINED` · `REJECTED`, or `error_category` on a FAILED run.
 

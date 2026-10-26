@@ -530,7 +530,7 @@ This file lists every decision that must be closed before implementation, every 
 | Status | Closed |
 | Closing task | DEC-17 · Sprint 1 |
 | Affects | P3-H3 · AI-030 · AI-033 · CT-12 |
-| Decision | Approved (2026-10-27), full text in CT-12 v1.0: the Backend proposal accepted by the AI Team. Payload `baplie_file_id` + `source` (FILE / STAGED_PAYLOAD); new `baplie_parse_run` table (CT-17); outcomes PARSED / QUARANTINED / REJECTED plus FAILED runs for technical errors; the worker writes `parse_status` and `staged_payload` only, the Backend sets ACTIVE / REPLACED on C-06; corrections are re-validated and committed by the worker. NFR-PERF-2 size classes removed at the AI Team's request: **needs Leads Council sign-off.** |
+| Decision | Approved (2026-10-27), full text in CT-12 v1.0: the Backend proposal accepted by the AI Team. Payload `baplie_file_id` + `source` (FILE / STAGED_PAYLOAD); new `baplie_parse_run` table (CT-17); outcomes PARSED / QUARANTINED / REJECTED plus FAILED runs for technical errors; the worker writes `parse_status` and `staged_payload` only, the Backend sets ACTIVE / REPLACED on C-06; corrections are re-validated and committed by the worker. NFR-PERF-2 (BAPLIE parse time by file size) is **removed from the MVP**, requested by the AI Team and approved by the Leads Council on 2026-10-27; QA runs no BAPLIE performance tests (CT-24). |
 
 <div dir="rtl">
 
