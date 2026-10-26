@@ -27,10 +27,10 @@ All contracts are written and approved in **Sprint 1**. Each contract has a task
 | CT-10 | C-02 · Part 2 solve | Backend | AI | DEC-15 |
 | CT-11 | C-03 · Yard placement | Backend | AI | DEC-16 |
 | CT-12 | C-04 · BAPLIE parse | Backend | AI | DEC-17 |
-| CT-13 | C-05 · Validation (FastAPI) | AI | Backend | DEC-03 · DEC-18 |
+| CT-13 | C-05 · Validation (`queue:validate`) | AI | Backend | DEC-03 · DEC-18 |
 | CT-14 | C-06 · Completion message | AI | Backend | DEC-01 · DEC-19 |
 | CT-15 | AI result tables and write ownership | AI | Backend | DEC-02 |
-| CT-16 | FastAPI internal API | AI | Backend | DEC-10 |
+| CT-16 | Worker health over Redis | AI | Backend | DEC-10 |
 | CT-17 | Database schema (migrations) | Backend | AI | DEC-08 |
 | CT-18 | AI seed data and `port_setting` keys | AI | Backend | DEC-12 · DEC-23 |
 | CT-19 | Mock worker behaviour | Backend | Frontend · Mobile · QA | — |
@@ -311,6 +311,20 @@ data: {"entity":"berthing_request","id":1550,"recommendation_id":880,"status":"R
 - **`job_type`:** `PART1_RUN` · `PART2_SOLVE` · `YARD_PLACEMENT` · `BAPLIE_PARSE`.
 - **Idempotency:** the worker claims the run with a conditional update (QUEUED → RUNNING), so a second delivery of the same run is ignored.
 
+**Updates from approved contracts (CT-11 · CT-13 · CT-14, 2026-10-27):**
+
+| Queue | `job_type` | Worker account |
+| --- | --- | --- |
+| `queue:part1` | `PART1_RUN` | `w_part1` |
+| `queue:part2` | `PART2_SOLVE` | `w_part2` |
+| `queue:yard` | `YARD_PLACEMENT` | `w_yard` |
+| `queue:edi` | `BAPLIE_PARSE` | `w_edi` |
+| `queue:validate` | `VALIDATION` | `w_validate` |
+| `queue:ai-results` | C-06 messages (worker → Backend) | — |
+
+- `run_id` is `integer | null`: `null` only for `VALIDATION` (which also requires `triggered_by_user_id`); an integer for every other job type.
+- Each payload schema (C-01 to C-05) describes the payload only and is referenced from `envelope.schema.json` with `if job_type = … then payload: { $ref }`.
+
 **Error categories:**
 `INVALID_ENVELOPE` · `PRECONDITION_FAILED` · `DATA_UNAVAILABLE` · `CONFIGURATION_ERROR` · `INFEASIBLE` · `SOLVER_ERROR` · `TIMEOUT` · `INTERNAL_ERROR`
 
@@ -450,7 +464,7 @@ The schema describes the **payload only**. `envelope.schema.json` (CT-08) refere
 | `SOLVED` | `OPTIMAL` / `FEASIBLE` | For every request |
 | `PARTIALLY_SOLVED` | `OPTIMAL` / `FEASIBLE` | For some requests; the others are `NO_FEASIBLE_PLAN` |
 | `NO_FEASIBLE_PLAN` | `INFEASIBLE` | None. Requests stay `ENTRY_WINDOW_CONFIRMED` |
-| `FIFO_FALLBACK` | `ERROR` | FIFO plans (`source = FIFO`) for the requests that pass the hard filter |
+| `FIFO_FALLBACK` | `ERROR` | FIFO plans (`source = FIFO`) for the requests that pass the hard filter. C-06 carries `status = DONE` (plans were written) with the technical reason in `error_category`, while `solver_run.status` stays `ERROR` (CT-14) |
 | `GENERATION_FAILED` | `ERROR` | None |
 
 - **Per-request `outcome`:** `SOLVED` · `FIFO_FALLBACK` · `NO_FEASIBLE_PLAN`.
@@ -757,61 +771,180 @@ All commit logic for `container` / `container_manifest_entry` / `vessel` stays i
 
 ---
 
-## CT-13 · C-05 · Validation (FastAPI)
+## CT-13 · C-05 · Validation (`queue:validate`)
 
 | | |
 | --- | --- |
-| Between | AI → Backend |
+| Between | Backend → AI (`w_validate`) → Backend |
 | Owner | AI Team |
 | Reviewers | Backend Team |
-| Output | Validate section of `contracts/openapi/ai-internal.yaml` |
+| Output | `contracts/ai/c05-validation.schema.json` (payload only) |
+| Status | Approved v1.0 · 2026-10-27 (DEC-03 · DEC-18) |
 
-- **Override and yard adjustment:** synchronous request with an immediate answer (DEC-03).
-- **BAPLIE correction:** asynchronous on `queue:edi` with the same fields; the result comes back through C-06.
-- **If the FastAPI service is unreachable:** the Backend refuses the change (fail closed).
+FastAPI is cancelled (DEC-10), so validation is an async job. A result with violations is a **warning**: the officer can still confirm with a reason (DEC-03).
 
-```json
-// POST /internal/v1/validate
-{
-  "validation_type": "OVERRIDE",
-  "subject_id": 9031,
-  "proposed_change": { "component_type": "BERTH", "new_value": 14 }
-}
-
-// 200
-{
-  "valid": false,
-  "violations": [
-    { "constraint_type_code": "MAX_DRAFT", "message_key": "validation.berth.draft_exceeded", "detail": "Draft 14.2 m > berth depth 13.5 m" }
-  ]
-}
-```
-
----
-
-## CT-14 · C-06 · Completion message
-
-| | |
+| Validation | Where |
 | --- | --- |
-| Between | AI → Backend |
-| Owner | AI Team |
-| Reviewers | Backend Team |
-| Output | `contracts/ai/c06-completion.schema.json`; the list is named `queue:ai-results` |
+| `OVERRIDE` (berth, pilot, tug, start time) | `queue:validate` → `w_validate` (this contract) |
+| `YARD_ADJUSTMENT` | `queue:validate` → `w_validate` (this contract) |
+| BAPLIE correction | `queue:edi` → `w_edi`, a `BAPLIE_PARSE` job with `source = STAGED_PAYLOAD` (CT-12) |
+| Window re-check on confirm | Laravel (DEC-03) |
+
+**Flow:**
+
+| Step | Who | What |
+| --- | --- | --- |
+| 1 | Backend | Stores the proposed change under a new `job_id` in Redis (TTL `validation_result_ttl_seconds`), RPUSHes a `VALIDATION` job and answers **202** with the `job_id` |
+| 2 | AI | `w_validate` reads port state from the primary and checks the change. It writes **nothing** to the DB |
+| 3 | AI | Sends C-06 with `job_type = VALIDATION`, the same `job_id` and `validation_result` |
+| 4 | Backend | Matches C-06 by `job_id`, keeps the result for `validation_result_ttl_seconds`, sends an SSE event to that officer |
+| 5 | Officer | `VALID` → confirms. `VIOLATIONS` → sees each broken constraint and may still confirm with a reason |
+| 6 | Backend | Applies the override only if the result exists, has not expired, and was produced for the **same proposed change** and the **same recommendation version**. An override with violations is audited with `action = SAFETY_EXCEPTION` |
+
+- **Fail closed:** no result within `validation_timeout_seconds` (15) → "validation unavailable" and the change is refused. A missing check is not a checked warning.
+- **Recommendation version (Backend):** `recommendation` has no version column, so the Backend stores with the job the recommendation `status` and the latest `recommendation_override.id` of that option; the result is valid only if both are unchanged at confirm time.
+
+**Envelope:** `job_type = VALIDATION`, `run_id = null` (no run table; `job_id` is the correlation key), `triggered_by_user_id` = the officer, never retried (the Backend timeout covers a lost job).
 
 ```json
 {
   "contract_version": "1.0",
-  "job_type": "PART2_SOLVE",
-  "run_id": 2301,
-  "status": "DONE",
-  "outcome": "SOLVED",
-  "error_category": null,
-  "finished_at": "2026-11-02T10:02:14Z"
+  "job_type": "VALIDATION",
+  "job_id": "7c1e4b2a-9d3f-4e8a-b6c5-1f2e3d4c5b6a",
+  "run_id": null,
+  "enqueued_at": "2026-11-02T10:20:00Z",
+  "triggered_by_user_id": 41,
+  "payload": {
+    "validation_type": "OVERRIDE",
+    "subject_id": 9031,
+    "proposed_change": {
+      "changes": [
+        { "component_type": "BERTH", "override_berth_id": 14 },
+        { "component_type": "TUG", "original_tugboat_id": 7, "override_tugboat_id": 11 }
+      ]
+    }
+  }
 }
 ```
 
-- Part 3 uses the same message with `job_type = PART3_EVALUATION`, `outcome = DRIFT_DETECTED` and `drift_measurement_id`.
-- On receipt, the Backend performs the request transition, writes the audit entry, and sends the notification and the SSE event.
+```json
+{
+  "validation_type": "YARD_ADJUSTMENT",
+  "subject_id": 640,
+  "proposed_change": { "placements": [ { "manifest_entry_id": 99812, "yard_block_id": 31, "yard_slot_id": null } ] }
+}
+```
+
+**Payload rules** (full schema in `c05-validation.schema.json`):
+
+- `subject_id` = `recommendation_option.id` for `OVERRIDE`, `terminal_recommendation.id` for `YARD_ADJUSTMENT`.
+- `OVERRIDE.changes`: 1 to 8 items, validated together as one plan. Items: `BERTH` (`override_berth_id`) · `PILOT` (`override_pilot_user_id`) · `TUG` (`original_tugboat_id`, `override_tugboat_id`; null original = added, null override = removed, never both null) · `START_TIME` (`override_start`).
+- `YARD_ADJUSTMENT.placements`: only the changed containers, each with `manifest_entry_id`, `yard_block_id`, `yard_slot_id` (nullable).
+- **Checked by the Backend before RPUSH** (the worker returns `INVALID_ENVELOPE` otherwise): at most one `BERTH`, one `PILOT` and one `START_TIME` item; a `manifest_entry_id` appears at most once.
+
+**Preconditions** (C-06 `FAILED` / `PRECONDITION_FAILED`):
+
+| `validation_type` | Check |
+| --- | --- |
+| `OVERRIDE` | `recommendation_option` exists and its recommendation is `PENDING_REVIEW` or `MODIFIED_BY_STAFF` |
+| `YARD_ADJUSTMENT` | `terminal_recommendation` exists, `rec_type = YARD_PLACEMENT`, `lifecycle_status` is `YARD_REC_GENERATED` or `YARD_REC_ACCEPTED`; every `manifest_entry_id` belongs to the ACTIVE BAPLIE of that request; every block belongs to the terminal's yard |
+
+**Result** (`validation_result` in C-06, defined in `c06-completion.schema.json`):
+
+```json
+{
+  "validation_type": "OVERRIDE",
+  "subject_id": 9031,
+  "valid": false,
+  "violations": [
+    { "kind": "STRUCTURAL", "constraint_type_code": "MAX_DRAFT", "is_hard_safety_limit": false,
+      "message_key": "validation.berth.draft_exceeded", "detail": "Arrival draft 14.2 m exceeds berth B14 depth 13.5 m",
+      "change_index": 0, "manifest_entry_id": null },
+    { "kind": "SAFETY", "constraint_type_code": "MIN_UKC_M", "is_hard_safety_limit": true,
+      "message_key": "validation.ukc.below_minimum", "detail": "UKC 0.4 m at berth B14 on 2026-11-03 06:00 is below the minimum 0.8 m",
+      "change_index": null, "manifest_entry_id": null }
+  ]
+}
+```
+
+- `kind = SAFETY`: `constraint_type_code` from the CT-18 seed; `is_hard_safety_limit` copied from that row. `kind = STRUCTURAL`: codes below; `is_hard_safety_limit` always `false`.
+- `change_index`: index in `changes` (`null` when the problem comes from the combination). `manifest_entry_id`: the container concerned (yard).
+- At most 500 violations; `violations_truncated = true` if there were more. `message_key` ≤ 120, `detail` ≤ 255 characters.
+- **STRUCTURAL codes, `OVERRIDE`:** `MAX_LOA` · `MAX_DRAFT` · `TERMINAL_COMPATIBILITY` · `BERTH_UNAVAILABLE` · `BERTH_OCCUPIED` · `TUG_UNAVAILABLE` · `TUG_COUNT` (DEC-20) · `PILOT_UNAVAILABLE` (DEC-32) · `PILOT_RANK_LIMIT` · `ENTRY_WINDOW`.
+- **STRUCTURAL codes, `YARD_ADJUSTMENT`:** `YARD_REEFER_PLUG` · `YARD_DG_CLASS` · `YARD_OOG_LIMIT` · `YARD_BLOCK_CAPACITY` (CT-11 counting rule) · `YARD_SLOT_OCCUPIED` · `YARD_SLOT_BLOCKED`.
+
+**New `port_setting` keys (CT-18):** `validation_timeout_seconds` = 15 · `validation_result_ttl_seconds` = 600.
+
+---
+
+## CT-14 · C-06 · Completion message (`queue:ai-results`)
+
+| | |
+| --- | --- |
+| Between | AI → Backend |
+| Owner | AI Team (message shape, DEC-19) · Backend Team (delivery and handling, DEC-01) |
+| Reviewers | Backend Team · AI Team |
+| Output | `contracts/ai/c06-completion.schema.json` |
+| Status | Approved v1.0 · 2026-10-27 (DEC-01 · DEC-19) |
+
+**Delivery (worker side):**
+
+- The worker RPUSHes to `queue:ai-results` (no Redis prefix, DEC-04) **after** its result transaction has committed. One message per run, after the last retry.
+- A run that lost its final conditional update (REPLACED while running) rolls back and sends nothing (DEC-08).
+- Delivery is at-least-once; the Backend de-duplicates.
+
+**Handling (Backend side, DEC-01):**
+
+- A supervised consumer, `php artisan ai:consume-results`, reads with BLPOP. Target: SSE and notifications within 5 s of the commit.
+- **Poller safety net** every 30 s: runs that are DONE or FAILED with `result_handled_at IS NULL`, and `drift_measurement` rows with `is_drifted = 1` and `notified_at IS NULL`, are handled as if C-06 had arrived. `VALIDATION` has no poller; its timeout covers a lost message.
+- **De-duplication:** run jobs are claimed with `UPDATE <run> SET result_handled_at = NOW() WHERE id = ? AND result_handled_at IS NULL` (0 rows → ignore). `VALIDATION` and `PART3_EVALUATION` are de-duplicated with a Redis key on `job_id`. `result_handled_at` and `drift_measurement.notified_at` are Backend-only columns (CT-17).
+- On receipt the Backend performs the request transition, the audit entry, the notification and the SSE event, then closes old rows (REPLACED, ACTIVE) as agreed in DEC-08.
+- **Stale runs:** the Backend sweeper marks a run RUNNING longer than `run_stale_after_seconds` as FAILED / `TIMEOUT` and handles it like a FAILED C-06.
+
+**Fields by `job_type`:**
+
+| `job_type` | `run_id` | `status = DONE` → `outcome` | `status = FAILED` → `outcome` | Extra field |
+| --- | --- | --- | --- | --- |
+| `PART1_RUN` | `part1_run.id` | `WINDOWS_FOUND` · `NO_FEASIBLE_WINDOW` · `ENV_DATA_UNAVAILABLE` | `null` | `entry_window_proposal_id`: integer with `WINDOWS_FOUND` (and with `NO_FEASIBLE_WINDOW` if DEC-07 = Option 1), otherwise `null` |
+| `PART2_SOLVE` | `solver_run.id` | `SOLVED` · `PARTIALLY_SOLVED` · `NO_FEASIBLE_PLAN` · `FIFO_FALLBACK` | `GENERATION_FAILED` | Per-request detail in `solver_run.result_detail` (CT-10) |
+| `YARD_PLACEMENT` | `yard_run.id` | `YARD_REC_GENERATED` | `GENERATION_FAILED` | `terminal_recommendation_id` |
+| `BAPLIE_PARSE` | `baplie_parse_run.id` | `PARSED` · `QUARANTINED` · `REJECTED` | `null` | `baplie_file_id` |
+| `VALIDATION` | `null` | `VALID` · `VIOLATIONS` | `null` | `validation_result` (DONE only) |
+| `PART3_EVALUATION` | `null` | `EVALUATED` · `DRIFT_DETECTED` | `null` | `drift_measurement_ids` (at least 1 with `DRIFT_DETECTED`) |
+
+**`error_category`:** `null` with DONE, except `FIFO_FALLBACK`, which carries the technical reason (`SOLVER_ERROR` · `TIMEOUT` · `INTERNAL_ERROR`). Required with FAILED. `INFEASIBLE` is used only by `YARD_PLACEMENT`.
+
+```json
+{ "contract_version": "1.0", "job_type": "PART1_RUN", "job_id": "3f6b2c1e-8a1d-4a51-9f1e-2b0c7d9e4a10", "run_id": 812,
+  "status": "DONE", "outcome": "WINDOWS_FOUND", "error_category": null, "entry_window_proposal_id": 455,
+  "finished_at": "2026-11-02T09:15:41Z", "worker_version": "0.6.0" }
+```
+
+```json
+{ "contract_version": "1.0", "job_type": "PART2_SOLVE", "job_id": "b81e0c2d-4f5a-4b6c-8d7e-9f0a1b2c3d4e", "run_id": 2302,
+  "status": "DONE", "outcome": "FIFO_FALLBACK", "error_category": "TIMEOUT",
+  "finished_at": "2026-11-02T12:20:13Z", "worker_version": "0.6.0" }
+```
+
+```json
+{ "contract_version": "1.0", "job_type": "PART3_EVALUATION", "job_id": "5e4d3c2b-1a09-4f8e-9d7c-6b5a4f3e2d1c", "run_id": null,
+  "status": "DONE", "outcome": "DRIFT_DETECTED", "error_category": null, "drift_measurement_ids": [41, 42],
+  "finished_at": "2026-11-03T02:00:31Z", "worker_version": "0.6.0" }
+```
+
+- `job_id` is the envelope `job_id`; for `PART3_EVALUATION` (no envelope) the worker generates it.
+- Every field outside a job type's row is forbidden for that job type (see the schema).
+
+**What the Backend does on receipt:**
+
+| `job_type` | Backend actions |
+| --- | --- |
+| `PART1_RUN` | Previous `entry_window_proposal` → REPLACED · request transition · audit · SSE `ENTRY_WINDOW_READY` or `RUN_FAILED` · notification |
+| `PART2_SOLVE` | Previous PENDING_REVIEW recommendation of each solved request → REPLACED · request transitions · audit · SSE `RECOMMENDATION_READY` · sends the held triggers as the next solve (CT-10) |
+| `YARD_PLACEMENT` | Audit · SSE `YARD_RECOMMENDATION_READY` / `YARD_RECOMMENDATION_FAILED` |
+| `BAPLIE_PARSE` | On PARSED: new file ACTIVE, previous REPLACED · stale yard regeneration (CT-11) · audit · SSE `BAPLIE_PARSED` |
+| `VALIDATION` | Stores the result for `validation_result_ttl_seconds` · SSE to the officer |
+| `PART3_EVALUATION` | On DRIFT_DETECTED: SSE `DRIFT_ALERT` · notification · sets `drift_measurement.notified_at` |
 
 ---
 
@@ -819,53 +952,85 @@ All commit logic for `container` / `container_manifest_entry` / `vessel` stays i
 
 | | |
 | --- | --- |
-| Between | AI → Backend |
-| Owner | AI Team |
+| Between | AI ↔ Backend |
+| Owner | AI Team (document) · Backend Team (DEC-02) |
 | Reviewers | Backend Team |
 | Output | `contracts/ai/table-ownership.md` |
+| Status | Approved v1.0 · 2026-10-27 (DEC-02 · DEC-08) |
 
-| Table | Created by | Completed by |
-| --- | --- | --- |
-| `part1_run` | Backend (QUEUED) | AI (status, outcome, retries) |
-| `entry_window_proposal` · `feasible_window` · `blocked_period` | AI | Backend (confirm or reject) |
-| `forecast_run` · `environment_forecast_point` | AI (scheduled and on-demand) · Backend (manual) | — |
-| `tide_prediction_run` · `tide_prediction_point` · `demand_forecast_slot` | AI | — |
-| `solver_run` | Backend (QUEUED) | AI |
-| `recommendation` · `recommendation_option` · `recommendation_option_tug` · `recommendation_rationale_factor` | AI | Backend (CONFIRMED, MODIFIED_BY_STAFF, REPLACED) |
-| `terminal_recommendation` · `yard_placement_item` | Backend (request) · AI (result) | Backend (decision and export) |
-| `baplie_file` (status fields) · `baplie_parse_issue` · `container` · `container_manifest_entry` | Backend (file) · AI (parsing) | — |
-| `evaluation_metric` · `drift_measurement` | AI | — |
-| `berthing_request` · `audit_log` · `notification_log` | Backend only | — |
+**Rules:**
+
+- The worker inserts new rows and completes **only its own run**; every final run update is conditional on `status = 'RUNNING'`.
+- The Backend creates runs and closes old rows (REPLACED, ACTIVE, CONFIRMED, REJECTED), and writes every request transition, history row and audit entry.
+- No worker deletes anything. `VALIDATION` writes nothing (`w_validate` has SELECT only).
+
+| Table | Created by | Completed / changed by | AI columns (UPDATE) |
+| --- | --- | --- | --- |
+| `part1_run` | Backend (QUEUED) | AI: its own run. Backend: old run → REPLACED when it sends a new one | `status`, `outcome`, `retry_count`, `entry_window_proposal_id`, `started_at`, `finished_at` |
+| `entry_window_proposal` | AI (PROPOSED) | Backend: CONFIRMED, REJECTED, REPLACED (on C-06) and the confirm / reject columns | — |
+| `feasible_window` · `blocked_period` | AI | — | — |
+| `forecast_run` · `environment_forecast_point` | AI (SCHEDULED, ON_DEMAND; a failed pull inserts a FAILED run) · Backend (MANUAL) | — | — |
+| `tide_prediction_run` · `tide_prediction_point` · `demand_forecast_slot` | AI | — | — |
+| `solver_run` | Backend (QUEUED, `solver_version` from `port_setting`) | AI: its own run | `status`, `objective_value`, `solve_time_ms`, `solver_version`, `result_detail`, `started_at`, `finished_at` |
+| `solver_run_model_version` | AI | — | — |
+| `recommendation` · `recommendation_option` · `recommendation_option_tug` · `recommendation_rationale_factor` | AI | Backend: REPLACED, CONFIRMED, MODIFIED_BY_STAFF | — |
+| `terminal_recommendation` (YARD_PLACEMENT) | Backend (YARD_REC_REQUESTED; reset on regeneration) | AI: generation result. Backend: decision, accept or reject, export | `lifecycle_status` (GENERATED / GENERATION_FAILED only), `confidence`, `rationale_template_id`, `failure_reason` |
+| `yard_run` | Backend (QUEUED; old run → REPLACED) | AI: its own run | `status`, `outcome`, `error_category`, `result_detail`, `worker_version`, `started_at`, `finished_at` |
+| `yard_placement_item` | AI | Backend: deletes old items on regeneration | — |
+| `baplie_file` | Backend (STAGED, PENDING) | AI: parse result. Backend: ACTIVE / REPLACED / WITHDRAWN, correction columns, edits `staged_payload` on correction | `parse_status`, `staged_payload` |
+| `baplie_parse_run` | Backend (QUEUED; old run → REPLACED) | AI: its own run | `status`, `outcome`, `error_category`, `retry_count`, `container_count`, `result_detail`, `worker_version`, `started_at`, `finished_at` |
+| `baplie_parse_issue` · `container` · `container_manifest_entry` | AI | — | — |
+| `vessel` | Backend | AI: fills NULL columns only | `call_sign`, `flag_state` |
+| `evaluation_metric` · `drift_measurement` | AI (`w_part3`) | Backend: `drift_measurement.notified_at` | — |
+| `result_handled_at` (all run tables) | — | Backend only | — |
+| `terminal_recommendation` (TIMING / STORAGE_ALLOCATION) · `storage_allocation_item` | Nobody (DEC-55, future work) | — | — |
+| `berthing_request` (+ history) · `operational_plan` · `plan_component` · `recommendation_override` · `audit_log` · `notification_log` | Backend only | — | — |
 
 ---
 
-## CT-16 · FastAPI internal API
+## CT-16 · Worker health over Redis (replaces the FastAPI internal API)
 
 | | |
 | --- | --- |
 | Between | AI → Backend |
 | Owner | AI Team |
 | Reviewers | Backend Team |
-| Output | `contracts/openapi/ai-internal.yaml`, the OpenAPI file generated by FastAPI |
+| Output | `contracts/ai/worker-heartbeat.schema.json` |
+| Status | Approved v1.0 · 2026-10-27 (DEC-10) |
 
-The FastAPI service is internal to the port server and is not exposed to the web or the mobile app. Authentication uses `X-Service-Token` (DEC-10).
+FastAPI is cancelled (DEC-10):
 
-| Endpoint | Purpose |
+| Old endpoint | Replacement |
 | --- | --- |
-| `GET /internal/v1/health` | Service health and DB / Redis connectivity |
-| `GET /internal/v1/workers` | Status and last heartbeat of each worker |
-| `GET /internal/v1/runs/{job_type}/{run_id}` | Run status for diagnosis |
-| `POST /internal/v1/validate` | CT-13 |
+| `GET /internal/v1/health` | Heartbeat keys below |
+| `GET /internal/v1/workers` | Heartbeat keys + `LLEN` of each queue (read by the Backend) |
+| `GET /internal/v1/runs/{job_type}/{run_id}` | The Backend reads the run tables directly |
+| `POST /internal/v1/validate` | CT-13 (`queue:validate`) |
+
+**Heartbeat rules:**
+
+- **Key:** `worker:{name}:heartbeat`, `name` = `part1` · `part2` · `yard` · `edi` · `validate` · `part3`. Written every 15 s with `SET … EX 60`.
+- **DOWN:** key missing. **Stale:** `last_heartbeat` older than 45 s (warning). **DEGRADED:** running but a dependency fails (reason in `status_detail`). **DRAINING:** finishing the current job, taking no new ones (deploys).
+- **Backend:** the admin worker-status page reads the keys and `LLEN` of each queue; an alert is raised when a worker is DOWN for more than 2 minutes.
 
 ```json
-// GET /internal/v1/workers
 {
-  "workers": [
-    { "name": "part2", "status": "UP", "last_heartbeat": "2026-11-02T10:05:00Z", "queue_depth": 0, "version": "0.6.0" },
-    { "name": "edi", "status": "UP", "last_heartbeat": "2026-11-02T10:04:58Z", "queue_depth": 1, "version": "0.6.0" }
-  ]
+  "contract_version": "1.0",
+  "name": "part1",
+  "status": "UP",
+  "status_detail": null,
+  "version": "0.6.0",
+  "host": "port-ai-01",
+  "started_at": "2026-11-02T06:00:00Z",
+  "last_heartbeat": "2026-11-02T10:05:00Z",
+  "current_job": { "job_type": "PART1_RUN", "job_id": "3f6b2c1e-8a1d-4a51-9f1e-2b0c7d9e4a10", "run_id": 812, "started_at": "2026-11-02T10:04:58Z" },
+  "processed_total": 120,
+  "failed_total": 1,
+  "schedules": { "last_weather_pull_at": "2026-11-02T06:00:12Z", "last_tide_compute_at": "2026-11-02T00:00:40Z", "last_demand_forecast_at": "2026-11-02T06:01:03Z" }
 }
 ```
+
+`current_job.job_type` also covers the scheduled jobs `WEATHER_PULL` · `TIDE_COMPUTE` · `DEMAND_FORECAST`. `schedules` is sent by `part1` and `part3` only.
 
 ---
 
@@ -879,6 +1044,7 @@ The FastAPI service is internal to the port server and is not exposed to the web
 | Output | Migrations in `project-backend`, and `contracts/db/schema.sql` updated with every new migration |
 
 - The AI Team builds its test schema from `schema.sql`.
+- **Pending additions from approved contracts:** new `yard_run` (CT-11) · new `baplie_parse_run` (CT-12) · `result_handled_at datetime NULL` on `part1_run`, `solver_run`, `yard_run`, `baplie_parse_run` and `notified_at datetime NULL` on `drift_measurement` (CT-14, Backend-only columns) · the worker grants script (DEC-08).
 - Any change to a table the AI writes to is requested through the Backend and needs AI Team approval.
 
 ```sql
@@ -913,6 +1079,8 @@ CREATE TABLE part1_run (
   "port_setting": [ { "key": "solver_time_limit_seconds", "type": "int", "value": 10 } ]
 }
 ```
+
+- **Keys added by approved contracts (to be included in the seed spec):** `solver_option_equivalence_pct` = 10 (CT-10, DEC-23) · `validation_timeout_seconds` = 15 · `validation_result_ttl_seconds` = 600 (CT-13).
 
 ---
 

@@ -11,16 +11,16 @@ This file lists every decision that must be closed before implementation, every 
 
 | ID | Item | Owner | Status | Close by |
 | --- | --- | --- | --- | --- |
-| DEC-01 | AI completion signal | Backend Team | Open | Sprint 1 |
-| DEC-02 | Who writes status transitions, history, audit and run rows | Backend Team | Open | Sprint 1 |
-| DEC-03 | Location of the shared validation rule sets (override, yard adjustment, BAPLIE correction, window re-check) | AI Team | Open | Sprint 1 |
+| DEC-01 | AI completion signal | Backend Team | Closed | Sprint 1 |
+| DEC-02 | Who writes status transitions, history, audit and run rows | Backend Team | Closed | Sprint 1 |
+| DEC-03 | Location of the shared validation rule sets (override, yard adjustment, BAPLIE correction, window re-check) | AI Team | Closed | Sprint 1 |
 | DEC-04 | Job envelope, versioning, retries and stale-run timeout | AI Team | Open | Sprint 1 |
 | DEC-05 | SSE source for the dashboard | Backend Team | Open | Sprint 1 |
 | DEC-06 | Joint solve scope: which requests may change per trigger | AI Team | Open | Sprint 1 |
 | DEC-07 | Storing a NO_FEASIBLE_WINDOW result | AI Team | Open | Sprint 5 |
 | DEC-08 | Database read source and worker privileges | Backend Team | Closed | Sprint 1 |
 | DEC-09 | Where deviation thresholds live | Backend Team | Open | Sprint 6 |
-| DEC-10 | Scope of the AI FastAPI service | AI Team | Open | Sprint 1 |
+| DEC-10 | Scope of the AI FastAPI service | AI Team | Closed | Sprint 1 |
 | DEC-11 | Redis persistence | Backend Team | Open | Sprint 3 |
 | DEC-12 | AI `port_setting` keys | AI Team | Open | Sprint 1 |
 | DEC-13 | Who keeps the OpenAPI file current | Backend Team | Open | Sprint 1 |
@@ -28,8 +28,8 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-15 | C-02 · Part 2 solve | AI Team | Closed | Sprint 1 |
 | DEC-16 | C-03 · Yard placement | AI Team | Closed | Sprint 1 |
 | DEC-17 | C-04 · BAPLIE parse | AI Team | Closed | Sprint 1 |
-| DEC-18 | C-05 · Validation | AI Team | Open | Sprint 1 |
-| DEC-19 | C-06 · Completion message | AI Team | Open | Sprint 1 |
+| DEC-18 | C-05 · Validation | AI Team | Closed | Sprint 1 |
+| DEC-19 | C-06 · Completion message | AI Team | Closed | Sprint 1 |
 | DEC-20 | Tug-count formula | AI Team | Open | Sprint 2 |
 | DEC-21 | Phase 1 delay-risk rule | AI Team | Open | Sprint 3 |
 | DEC-22 | Financial-impact data in ranking | AI Team | Open | Sprint 4 |
@@ -76,10 +76,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | D-01 · OD-01 · AIBD-010 |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-01 · Sprint 1 |
 | Affects | P3-I3 · AI-011 · CT-14 |
-| Decision | ______ |
+| Decision | Closed (2026-10-27), full text in CT-14 v1.0. Option 1: after commit the worker RPUSHes C-06 to `queue:ai-results`; a supervised consumer (`php artisan ai:consume-results`, BLPOP) handles it; a poller every 30 s is the safety net (runs DONE/FAILED with `result_handled_at IS NULL`, and `drift_measurement` with `is_drifted = 1` and `notified_at IS NULL`). De-duplication: `result_handled_at` claim on run tables, Redis key on `job_id` for VALIDATION and PART3_EVALUATION. |
 
 <div dir="rtl">
 
@@ -103,10 +103,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | D-02 · OD-02 · AIBD-011 · AIBD-013 · AIBD-025 |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-02 · Sprint 1 |
 | Affects | P3-I2 · P4-K1 · AI-058 |
-| Decision | ______ |
+| Decision | Closed (2026-10-27), full text in CT-15 v1.0. Option 1: the Backend creates run rows, writes every request transition, history row and audit entry, and closes old rows (REPLACED, ACTIVE, CONFIRMED, REJECTED); workers insert new rows and complete only their own run (guarded by `status = 'RUNNING'`). `solver_version` is set by the Backend from `port_setting` and overwritten by the worker if different. The yard worker's `lifecycle_status` write is limited to GENERATED / GENERATION_FAILED. |
 
 <div dir="rtl">
 
@@ -129,10 +129,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | D-03 · OD-03 · AIBD-008 · AIBD-034 |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-03 · Sprint 1 |
 | Affects | P4-K4 · P6-P3 · P3-H6 · AI-060 · AI-067 · AI-F03 · CT-13 |
-| Decision | ______ |
+| Decision | Closed (2026-10-27), full text in CT-13 v1.0. Option 1 (async on a worker), since FastAPI is cancelled (DEC-10): override and yard adjustment on `queue:validate` (`w_validate`, SELECT only); BAPLIE correction on `queue:edi` with `source = STAGED_PAYLOAD`; window re-check stays in Laravel. Violations are warnings (override with a reason, audited as SAFETY_EXCEPTION); no result within `validation_timeout_seconds` → change refused (fail closed). |
 
 <div dir="rtl">
 
@@ -344,10 +344,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | New decision |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-10 · Sprint 1 |
 | Affects | AI-F01 · AI-F02 · AI-F03 · CT-16 |
-| Decision | ______ |
+| Decision | Closed (2026-10-27): FastAPI is cancelled. Laravel and Python talk only through Redis and MySQL. Validation moves to `queue:validate` (CT-13); health moves to Redis heartbeat keys `worker:{name}:heartbeat` (CT-16). |
 
 <div dir="rtl">
 
@@ -552,10 +552,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | AI contract v1 · AIBD-008 |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-18 · Sprint 1 |
 | Affects | AI-F03 · P4-K4 · P6-P3 · CT-13 |
-| Decision | ______ |
+| Decision | Closed (2026-10-27), full text in CT-13 v1.0. Async variant: `VALIDATION` job with `validation_type` (OVERRIDE / YARD_ADJUSTMENT), `subject_id`, `proposed_change`; `run_id = null`, correlation by `job_id`; result `validation_result` returned in C-06. |
 
 <div dir="rtl">
 
@@ -578,10 +578,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | AI contract v1 · AIBD-010 |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-19 · Sprint 1 |
 | Affects | P3-I3 · AI-011 · CT-14 |
-| Decision | ______ |
+| Decision | Closed (2026-10-27), full text in CT-14 v1.0. Fields: `contract_version`, `job_type`, `job_id`, `run_id`, `status` (DONE / FAILED), `outcome`, `error_category`, `finished_at`, `worker_version`, plus one extra field per job type (`entry_window_proposal_id`, `terminal_recommendation_id`, `baplie_file_id`, `validation_result`, `drift_measurement_ids`). List name `queue:ai-results`. |
 
 <div dir="rtl">
 
