@@ -690,7 +690,15 @@ The worker never writes `baplie_file.status` (DEC-08). Between step 3 and step 5
 - **ERROR issues (→ QUARANTINED):** IMO in the file ≠ `vessel.imo_number` of the request · duplicate container number in the file · unknown ISO size type · unknown `imdg_class` · malformed value (weight, UN/LOCODE, temperature outside −40 … 40) · reefer without set temperature.
 - **WARNING issues (→ still PARSED):** wrong container check digit · missing `full_empty` (written NULL) · missing `port_of_discharge` (written NULL) · vessel name differs from `vessel.name` · existing container with a different size type.
 - The Backend blocks customs approval and yard recommendations while any line has a NULL `full_empty` or a NULL `port_of_discharge`.
-- Supported BAPLIE versions: listed by the AI Team in the schema description.
+- **Supported BAPLIE versions (v1.0):**
+
+  | SMDG BAPLIE | UN/EDIFACT directory | `UNH` message identifier |
+  | --- | --- | --- |
+  | 2.2.1 (VGM) | D.95B | `BAPLIE:D:95B:UN:SMDG22` |
+  | 3.1.1 (VGM) | D.13B | `BAPLIE:D:13B:UN:SMDG31` |
+
+  The version is detected from the `UNH` segment (type, version, release, agency). The association code is read but not required to match: 2.x files of the D.95B family (2.1, 2.1.1, 2.2) are parsed with the 2.2.1 rules. Any other directory (for example BAPLIE 1.5), a version still in development (2.3, 3.2), a different message type or a non-EDIFACT file → `REJECTED` with one ERROR issue: `segment_ref = "UNH"`, `message = "Unsupported BAPLIE version: <found>. Supported: SMDG 2.2.1 (D.95B), SMDG 3.1.1 (D.13B)"`. Adding a version is a minor change (1.x).
+  - Schema description text: *The EDI Parser accepts SMDG BAPLIE 2.2.1 (UN/EDIFACT D.95B) and SMDG BAPLIE 3.1.1 (UN/EDIFACT D.13B), detected from the UNH message identifier. Any other version, message type or non-EDIFACT file ends as outcome REJECTED (parse_status FAILED) with an ERROR issue on segment UNH.*
 
 **Where failure reasons live:** parse problems (including `REJECTED` reasons) → `baplie_parse_issue` rows. Technical failures → `baplie_parse_run.error_category` and `result_detail.failure_reason = { "error_category", "message" }`, same shape as C-02 and C-03. No column is added to `baplie_file`.
 
