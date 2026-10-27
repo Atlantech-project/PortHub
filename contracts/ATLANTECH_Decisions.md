@@ -14,15 +14,15 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-01 | AI completion signal | Backend Team | Closed | Sprint 1 |
 | DEC-02 | Who writes status transitions, history, audit and run rows | Backend Team | Closed | Sprint 1 |
 | DEC-03 | Location of the shared validation rule sets (override, yard adjustment, BAPLIE correction, window re-check) | AI Team | Closed | Sprint 1 |
-| DEC-04 | Job envelope, versioning, retries and stale-run timeout | AI Team | Open | Sprint 1 |
+| DEC-04 | Job envelope, versioning, retries and stale-run timeout | AI Team | Closed | Sprint 1 |
 | DEC-05 | SSE source for the dashboard | Backend Team | Open | Sprint 1 |
-| DEC-06 | Joint solve scope: which requests may change per trigger | AI Team | Open | Sprint 1 |
+| DEC-06 | Joint solve scope: which requests may change per trigger | AI Team | Closed | Sprint 1 |
 | DEC-07 | Storing a NO_FEASIBLE_WINDOW result | AI Team | Open | Sprint 5 |
 | DEC-08 | Database read source and worker privileges | Backend Team | Closed | Sprint 1 |
 | DEC-09 | Where deviation thresholds live | Backend Team | Open | Sprint 6 |
 | DEC-10 | Scope of the AI FastAPI service | AI Team | Closed | Sprint 1 |
 | DEC-11 | Redis persistence | Backend Team | Open | Sprint 3 |
-| DEC-12 | AI `port_setting` keys | AI Team | Open | Sprint 1 |
+| DEC-12 | AI `port_settings` keys | AI Team | Closed | Sprint 1 |
 | DEC-13 | Who keeps the OpenAPI file current | Backend Team | Open | Sprint 1 |
 | DEC-14 | C-01 · Part 1 run | AI Team | Closed | Sprint 1 |
 | DEC-15 | C-02 · Part 2 solve | AI Team | Closed | Sprint 1 |
@@ -33,7 +33,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-20 | Tug-count formula | AI Team | Open | Sprint 2 |
 | DEC-21 | Phase 1 delay-risk rule | AI Team | Open | Sprint 3 |
 | DEC-22 | Financial-impact data in ranking | AI Team | Open | Sprint 4 |
-| DEC-23 | Objective terms, weights and number of options | AI Team | Open | Sprint 1 |
+| DEC-23 | Objective terms, weights and number of options | AI Team | Closed | Sprint 1 |
 | DEC-24 | Part 1 settings: horizon, time step, minimum window, slot | AI Team | Open | Sprint 4 |
 | DEC-25 | Uncertainty margin and window confidence | AI Team | Open | Sprint 3 |
 | DEC-26 | Weather and marine providers | AI Team | Open | Sprint 4 |
@@ -79,7 +79,7 @@ This file lists every decision that must be closed before implementation, every 
 | Status | Closed |
 | Closing task | DEC-01 · Sprint 1 |
 | Affects | P3-I3 · AI-011 · CT-14 |
-| Decision | Closed (2026-10-27), full text in CT-14 v1.0. Option 1: after commit the worker RPUSHes C-06 to `queue:ai-results`; a supervised consumer (`php artisan ai:consume-results`, BLPOP) handles it; a poller every 30 s is the safety net (runs DONE/FAILED with `result_handled_at IS NULL`, and `drift_measurement` with `is_drifted = 1` and `notified_at IS NULL`). De-duplication: `result_handled_at` claim on run tables, Redis key on `job_id` for VALIDATION and PART3_EVALUATION. |
+| Decision | Closed (2026-10-27), full text in CT-14 v1.0. Option 1: after commit the worker RPUSHes C-06 to `queue:ai-results`; a supervised consumer (`php artisan ai:consume-results`, BLPOP) handles it; a poller every 30 s is the safety net (runs DONE/FAILED with `result_handled_at IS NULL`, and `drift_measurements` with `is_drifted = 1` and `notified_at IS NULL`). De-duplication: `result_handled_at` claim on run tables, Redis key on `job_id` for VALIDATION and PART3_EVALUATION. |
 
 <div dir="rtl">
 
@@ -106,7 +106,7 @@ This file lists every decision that must be closed before implementation, every 
 | Status | Closed |
 | Closing task | DEC-02 · Sprint 1 |
 | Affects | P3-I2 · P4-K1 · AI-058 |
-| Decision | Closed (2026-10-27), full text in CT-15 v1.0. Option 1: the Backend creates run rows, writes every request transition, history row and audit entry, and closes old rows (REPLACED, ACTIVE, CONFIRMED, REJECTED); workers insert new rows and complete only their own run (guarded by `status = 'RUNNING'`). `solver_version` is set by the Backend from `port_setting` and overwritten by the worker if different. The yard worker's `lifecycle_status` write is limited to GENERATED / GENERATION_FAILED. |
+| Decision | Closed (2026-10-27), full text in CT-15 v1.0. Option 1: the Backend creates run rows, writes every request transition, history row and audit entry, and closes old rows (REPLACED, ACTIVE, CONFIRMED, REJECTED); workers insert new rows and complete only their own run (guarded by `status = 'RUNNING'`). `solver_version` is set by the Backend from `port_settings` and overwritten by the worker if different. The yard worker's `lifecycle_status` write is limited to GENERATED / GENERATION_FAILED. |
 
 <div dir="rtl">
 
@@ -114,14 +114,14 @@ This file lists every decision that must be closed before implementation, every 
 
 </div>
 
-**Topic.** Request status (SM-4), its history and its audit need a single writer. `solver_run.solver_version` is mandatory and only the worker knows it.
+**Topic.** Request status (SM-4), its history and its audit need a single writer. `solver_runs.solver_version` is mandatory and only the worker knows it.
 
 **Options:**
 
 1. The Backend writes every request transition, history row and audit entry, and creates the run row as QUEUED before enqueueing. The AI writes run progress and result tables only.
 2. The AI writes everything in its result transaction.
 
-**Recommendation.** Option 1 (agreed). The Backend writes `solver_version` from `port_setting`; the worker overwrites it if different.
+**Recommendation.** Option 1 (agreed). The Backend writes `solver_version` from `port_settings`; the worker overwrites it if different.
 
 ### DEC-03 · Location of the shared validation rule sets (override, yard adjustment, BAPLIE correction, window re-check)
 
@@ -156,10 +156,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | D-04 · OD-22 |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-04 · Sprint 1 |
 | Affects | P3-I1 · AI-011 · CT-08 |
-| Decision | ______ |
+| Decision | Closed (2026-10-27): Option 1. JSON envelope pushed with RPUSH on unprefixed queue names (`queue:part1`, `queue:part2`, `queue:yard`, `queue:edi`, `queue:validate`), `contract_version = "1.0"`; payload schemas per job type referenced from `envelope.schema.json` (CT-08). Retries: Part 1 up to `part1_max_retries` (3), other jobs once, VALIDATION never. A run RUNNING longer than `run_stale_after_seconds` is marked FAILED / TIMEOUT by the Backend sweeper (`part1_run_timeout_seconds` from DEC-14 is dropped). |
 
 <div dir="rtl">
 
@@ -208,10 +208,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | D-07 · OD-08 |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-06 · Sprint 1 |
 | Affects | AI-050 · AI-055 · P4-K1 · P4-K5 |
-| Decision | ______ |
+| Decision | Closed (2026-10-27): **Option 2** (changed from the earlier Option 1 note). Only the requests listed in the PART2_SOLVE message are variable; every confirmed plan and every other pending recommendation is fixed capacity. Only the previous PENDING_REVIEW version of a solved request becomes REPLACED (by the Backend on C-06). Full rules in CT-10. |
 
 <div dir="rtl">
 
@@ -245,7 +245,7 @@ This file lists every decision that must be closed before implementation, every 
 
 </div>
 
-**Topic.** `blocked_period.proposal_id` is mandatory, so a proposal must exist even when no window exists.
+**Topic.** `blocked_periods.proposal_id` is mandatory, so a proposal must exist even when no window exists.
 
 **Options:**
 
@@ -263,7 +263,7 @@ This file lists every decision that must be closed before implementation, every 
 | Status | Closed |
 | Closing task | DEC-08 · Sprint 1 |
 | Affects | P3-I5 · AI-013 |
-| Decision | Closed (2026-10-27): Option 1. Workers read from the primary; six accounts (`w_part1`, `w_part2`, `w_yard`, `w_edi`, `w_validate`, `w_part3`); no DELETE, no DDL, column-level UPDATE on tables a worker does not own; no `audit_log` access (the Backend writes all audit entries on C-06). Rule: **workers insert new rows; the Backend retires old ones** (REPLACED / ACTIVE transitions). Full matrix under "Final grants" below. The Backend writes the grants script. |
+| Decision | Closed (2026-10-27): Option 1. Workers read from the primary; six accounts (`w_part1`, `w_part2`, `w_yard`, `w_edi`, `w_validate`, `w_part3`); no DELETE, no DDL, column-level UPDATE on tables a worker does not own; no `audit_logs` access (the Backend writes all audit entries on C-06). Rule: **workers insert new rows; the Backend retires old ones** (REPLACED / ACTIVE transitions). Full matrix under "Final grants" below. The Backend writes the grants script. |
 
 <div dir="rtl">
 
@@ -275,7 +275,7 @@ This file lists every decision that must be closed before implementation, every 
 
 **Options:**
 
-1. Read from the primary, one account per worker with limited rights, `audit_log` INSERT/SELECT only.
+1. Read from the primary, one account per worker with limited rights, `audit_logs` INSERT/SELECT only.
 2. Read from the replica and tolerate lag.
 
 **Recommendation.** Option 1 (agreed); the Backend writes the grants script.
@@ -284,32 +284,32 @@ This file lists every decision that must be closed before implementation, every 
 
 | Account | Queue / trigger | INSERT | UPDATE (columns) |
 | --- | --- | --- | --- |
-| `w_part1` | `queue:part1` + Part 1 scheduler (weather pull, daily tide, demand forecast) | `entry_window_proposal` · `feasible_window` · `blocked_period` · `forecast_run` (SCHEDULED / ON_DEMAND) · `environment_forecast_point` · `tide_prediction_run` · `tide_prediction_point` · `demand_forecast_slot` | `part1_run` (`status`, `outcome`, `retry_count`, `entry_window_proposal_id`, `started_at`, `finished_at`) on its own run only |
-| `w_part2` | `queue:part2` | `solver_run_model_version` · `recommendation` · `recommendation_option` · `recommendation_option_tug` · `recommendation_rationale_factor` | `solver_run` (`status`, `objective_value`, `solve_time_ms`, `solver_version`, `result_detail`, `started_at`, `finished_at`) |
-| `w_yard` | `queue:yard` | `yard_placement_item` | `yard_run` (`status`, `outcome`, `error_category`, `result_detail`, `worker_version`, `started_at`, `finished_at`) · `terminal_recommendation` (`lifecycle_status`, `confidence`, `rationale_template_id`, `failure_reason`) |
-| `w_edi` | `queue:edi` (parse and BAPLIE correction) | `baplie_parse_issue` · `container` (new numbers only) · `container_manifest_entry` | `baplie_parse_run` (`status`, `outcome`, `error_category`, `container_count`, `result_detail`, `worker_version`, `started_at`, `finished_at`) · `baplie_file` (`parse_status`, `staged_payload`) · `vessel` (`call_sign`, `flag_state`, only when NULL) |
+| `w_part1` | `queue:part1` + Part 1 scheduler (weather pull, daily tide, demand forecast) | `entry_window_proposals` · `feasible_windows` · `blocked_periods` · `forecast_runs` (SCHEDULED / ON_DEMAND) · `environment_forecast_points` · `tide_prediction_runs` · `tide_prediction_points` · `demand_forecast_slots` | `part1_runs` (`status`, `outcome`, `retry_count`, `entry_window_proposal_id`, `started_at`, `finished_at`) on its own run only |
+| `w_part2` | `queue:part2` | `solver_run_model_versions` · `recommendations` · `recommendation_options` · `recommendation_option_tugs` · `recommendation_rationale_factors` | `solver_runs` (`status`, `objective_value`, `solve_time_ms`, `solver_version`, `result_detail`, `started_at`, `finished_at`) |
+| `w_yard` | `queue:yard` | `yard_placement_items` | `yard_runs` (`status`, `outcome`, `error_category`, `result_detail`, `worker_version`, `started_at`, `finished_at`) · `terminal_recommendations` (`lifecycle_status`, `confidence`, `rationale_template_id`, `rationale_params`, `failure_reason`) |
+| `w_edi` | `queue:edi` (parse and BAPLIE correction) | `baplie_parse_issues` · `containers` (new numbers only) · `container_manifest_entries` | `baplie_parse_runs` (`status`, `outcome`, `error_category`, `container_count`, `result_detail`, `worker_version`, `started_at`, `finished_at`) · `baplie_files` (`parse_status`, `staged_payload`) · `vessels` (`call_sign`, `flag_state`, only when NULL) |
 | `w_validate` | `queue:validate` (override and yard-adjustment validation) | — | — |
-| `w_part3` | Part 3 scheduler (host per DEC-31) | `evaluation_metric` · `drift_measurement` | — |
+| `w_part3` | Part 3 scheduler (host per DEC-31) | `evaluation_metrics` · `drift_measurements` | — |
 
-**Read grants (all accounts):** SELECT on every port table, except: `user` column-level (`id`, `name`, `is_active`); `license_state` column-level (`mode`, `read_only_reason`); no access to `audit_log`, `notification_log`, `user_device`, `recommendation_review` or the SaaS database.
+**Read grants (all accounts):** SELECT on every port table, except: `users` column-level (`id`, `name`, `is_active`); `license_states` column-level (`mode`, `read_only_reason`); no access to `audit_logs`, `notification_logs`, `user_devices`, `recommendation_reviews` or the SaaS database.
 
 **Done by the Backend, not by workers:**
 
-- `baplie_file.status` (new file → ACTIVE, previous ACTIVE → REPLACED) on C-06 with PARSED.
-- The previous `part1_run` → REPLACED when a new run is enqueued (same as `yard_run` in CT-11).
-- The previous `entry_window_proposal` → REPLACED on C-06 when a new proposal was produced (same as recommendations in CT-10).
-- Every `audit_log` entry, on C-06.
+- `baplie_files.status` (new file → ACTIVE, previous ACTIVE → REPLACED) on C-06 with PARSED.
+- The previous `part1_runs` → REPLACED when a new run is enqueued (same as `yard_runs` in CT-11).
+- The previous `entry_window_proposals` → REPLACED on C-06 when a new proposal was produced (same as recommendations in CT-10).
+- Every `audit_logs` entry, on C-06.
 - Marking stale RUNNING runs as FAILED (sweeper, P3-I2).
 
-**Not in the grants now:** `terminal_recommendation` TIMING / STORAGE_ALLOCATION and `storage_allocation_item` (out of MVP, DEC-55); Part 3 retraining tables (`ml_model_version`, `retraining_run`) until retraining is built. Both are added through CT-17.
+**Not in the grants now:** `terminal_recommendations` TIMING / STORAGE_ALLOCATION and `storage_allocation_items` (out of MVP, DEC-55); Part 3 retraining tables (`ml_model_versions`, `retraining_runs`) until retraining is built. Both are added through CT-17.
 
 **Worker health:** each worker writes a Redis key `worker:{name}:heartbeat` (timestamp, version, queue depth; TTL 60 s). No DB grant is needed.
 
 **Rules confirmed by the AI Team (acknowledgement, 2026-10-27):**
 
-- **Final run update is guarded:** `UPDATE <run> SET status = 'DONE' … WHERE id = :run_id AND status = 'RUNNING'`. 0 rows → the Backend replaced the run; the worker rolls back the whole transaction (including inserted proposals or recommendations) and sends no C-06. Applies to `part1_run`, `solver_run`, `yard_run` and `baplie_parse_run`.
-- **Failed weather pull:** `w_part1` inserts a new `forecast_run` row with `status = FAILED`, `data_stale = 1` and no points; it never updates an older row. "Is the stored data stale?" is computed at read time from the age of the latest SUCCESS run against `part1_stored_data_max_age_hours` (48).
-- **Backend reads the current proposal** through `part1_run.entry_window_proposal_id` of the latest DONE run, never by `status = 'PROPOSED'` (there is a short window with two PROPOSED rows before C-06 is handled). Applies to `GET …/part1-result` and the window re-check on confirm.
+- **Final run update is guarded:** `UPDATE <run> SET status = 'DONE' … WHERE id = :run_id AND status = 'RUNNING'`. 0 rows → the Backend replaced the run; the worker rolls back the whole transaction (including inserted proposals or recommendations) and sends no C-06. Applies to `part1_runs`, `solver_runs`, `yard_runs` and `baplie_parse_runs`.
+- **Failed weather pull:** `w_part1` inserts a new `forecast_runs` row with `status = FAILED`, `data_stale = 1` and no points; it never updates an older row. "Is the stored data stale?" is computed at read time from the age of the latest SUCCESS run against `part1_stored_data_max_age_hours` (48).
+- **Backend reads the current proposal** through `part1_runs.entry_window_proposal_id` of the latest DONE run, never by `status = 'PROPOSED'` (there is a short window with two PROPOSED rows before C-06 is handled). Applies to `GET …/part1-result` and the window re-check on confirm.
 - **C-06 for `PART1_RUN`** carries `entry_window_proposal_id` (required when a proposal was inserted, otherwise `null`). Input to DEC-19.
 
 ### DEC-09 · Where deviation thresholds live
@@ -333,7 +333,7 @@ This file lists every decision that must be closed before implementation, every 
 
 **Options:**
 
-1. `port_setting` keys per component type.
+1. `port_settings` keys per component type.
 2. A new table.
 
 **Recommendation.** Option 1 (agreed). Edited from P-62.
@@ -391,16 +391,16 @@ This file lists every decision that must be closed before implementation, every 
 
 **Recommendation.** Option 1, with the sweeper (P3-I2) as a safety net.
 
-### DEC-12 · AI `port_setting` keys
+### DEC-12 · AI `port_settings` keys
 
 | | |
 | --- | --- |
 | Source | AIBD-021 · PS-02 |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-12 · Sprint 1 |
 | Affects | AI-012 · P2-F9 |
-| Decision | ______ |
+| Decision | Closed (2026-10-27): Option 1. AI settings live in `port_settings`, edited only by `PORT_GM` with audit and min / max plus cross-field validation on save; workers read them per job without cache. Key list and defaults in CT-18 v1.0. |
 
 <div dir="rtl">
 
@@ -469,7 +469,7 @@ This file lists every decision that must be closed before implementation, every 
 
 1. Payload: `berthing_request_id`, `reason` (CUSTOMS_APPROVAL / RECOMPUTE / MANUAL_DATA / REOPEN), `manual_forecast_run_id` when MANUAL_DATA.
 
-**Recommendation.** Approve the proposed payload. The timeout is not documented: proposed `part1_run_timeout_seconds = 120` in `port_setting`.
+**Recommendation.** Approve the proposed payload. The timeout is not documented: proposed `part1_run_timeout_seconds = 120` in `port_settings`.
 
 ### DEC-15 · C-02 · Part 2 solve
 
@@ -505,7 +505,7 @@ This file lists every decision that must be closed before implementation, every 
 | Status | Closed |
 | Closing task | DEC-16 · Sprint 1 |
 | Affects | P6-P1 · AI-066 · CT-11 |
-| Decision | Approved (2026-10-27), full text in CT-11 v1.0. Payload-only schema with `terminal_recommendation_id` and `operational_plan_id` (both required). Runs on a new `queue:yard` with its own worker. Run tracking in a new `yard_run` table (Backend adds it through CT-17; `run_id = yard_run.id`). Regeneration reuses the same `terminal_recommendation` row and marks older active runs REPLACED. Partial placement → `YARD_REC_GENERATED` with unplaced containers and reason codes in `yard_run.result_detail`; none placed → `GENERATION_FAILED` / `INFEASIBLE`. `yard_slot_id` always NULL in v1; nothing is a reservation. `confidence` = preferred-zone share (DEC-29 Option A). |
+| Decision | Approved (2026-10-27), full text in CT-11 v1.0. Payload-only schema with `terminal_recommendation_id` and `operational_plan_id` (both required). Runs on a new `queue:yard` with its own worker. Run tracking in a new `yard_runs` table (Backend adds it through CT-17; `run_id = yard_runs.id`). Regeneration reuses the same `terminal_recommendations` row and marks older active runs REPLACED. Partial placement → `YARD_REC_GENERATED` with unplaced containers and reason codes in `yard_runs.result_detail`; none placed → `GENERATION_FAILED` / `INFEASIBLE`. `yard_slot_id` always NULL in v1; nothing is a reservation. `confidence` = preferred-zone share (DEC-29 Option A). |
 
 <div dir="rtl">
 
@@ -530,7 +530,7 @@ This file lists every decision that must be closed before implementation, every 
 | Status | Closed |
 | Closing task | DEC-17 · Sprint 1 |
 | Affects | P3-H3 · AI-030 · AI-033 · CT-12 |
-| Decision | Approved (2026-10-27), full text in CT-12 v1.0: the Backend proposal accepted by the AI Team. Payload `baplie_file_id` + `source` (FILE / STAGED_PAYLOAD); new `baplie_parse_run` table (CT-17); outcomes PARSED / QUARANTINED / REJECTED plus FAILED runs for technical errors; the worker writes `parse_status` and `staged_payload` only, the Backend sets ACTIVE / REPLACED on C-06; corrections are re-validated and committed by the worker. Supported versions: SMDG BAPLIE 2.2.1 (D.95B) and 3.1.1 (D.13B); anything else is REJECTED. NFR-PERF-2 (BAPLIE parse time by file size) is **removed from the MVP**, requested by the AI Team and approved by the Leads Council on 2026-10-27; QA runs no BAPLIE performance tests (CT-24). |
+| Decision | Approved (2026-10-27), full text in CT-12 v1.0: the Backend proposal accepted by the AI Team. Payload `baplie_file_id` + `source` (FILE / STAGED_PAYLOAD); new `baplie_parse_runs` table (CT-17); outcomes PARSED / QUARANTINED / REJECTED plus FAILED runs for technical errors; the worker writes `parse_status` and `staged_payload` only, the Backend sets ACTIVE / REPLACED on C-06; corrections are re-validated and committed by the worker. Supported versions: SMDG BAPLIE 2.2.1 (D.95B) and 3.1.1 (D.13B); anything else is REJECTED. NFR-PERF-2 (BAPLIE parse time by file size) is **removed from the MVP**, requested by the AI Team and approved by the Leads Council on 2026-10-27; QA runs no BAPLIE performance tests (CT-24). |
 
 <div dir="rtl">
 
@@ -684,10 +684,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | OD-07 |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-23 · Sprint 1 |
 | Affects | AI-009 · AI-055 · AI-057 |
-| Decision | ______ |
+| Decision | Closed (2026-10-27): objective terms `WAITING_TIME` and `RESOURCE_COST`, equal weights (1.0 / 1.0) stored as `port_settings` keys `objective_weight_waiting_time` and `objective_weight_resource`; each term normalised to [0, 1] per request before weighting (scaled ×1000 for CP-SAT). 1 to 3 options per request: options 2 and 3 only within `solver_option_equivalence_pct` (10) of option 1. Full text in CT-10 and CT-18. |
 
 <div dir="rtl">
 
@@ -727,7 +727,7 @@ This file lists every decision that must be closed before implementation, every 
 
 1. Horizon 72 hours, step 30 minutes, minimum window 60 minutes, demand slot 60 minutes (proposed).
 
-**Recommendation.** Approve the proposed values as `port_setting` keys, changeable later without code.
+**Recommendation.** Approve the proposed values as `port_settings` keys, changeable later without code.
 
 ### DEC-25 · Uncertainty margin and window confidence
 
@@ -1110,7 +1110,7 @@ This file lists every decision that must be closed before implementation, every 
 **Options:**
 
 1. The same task statuses: In progress and Executed.
-2. Terminal-specific statuses from `status_type`.
+2. Terminal-specific statuses from `status_types`.
 
 **Recommendation.** Option 1 for the MVP: In progress and Executed on the terminal component.
 
@@ -1239,7 +1239,7 @@ This file lists every decision that must be closed before implementation, every 
 **Options:**
 
 1. Show the flag only, no note.
-2. A note field on `actual_status_update`.
+2. A note field on `actual_status_updates`.
 
 **Recommendation.** Option 1 for the MVP.
 
@@ -1264,7 +1264,7 @@ This file lists every decision that must be closed before implementation, every 
 
 **Options:**
 
-1. Display in port time from `port_profile.timezone`.
+1. Display in port time from `port_profiles.timezone`.
 2. User device time.
 
 **Recommendation.** Option 1 on web and mobile.

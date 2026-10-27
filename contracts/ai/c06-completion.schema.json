@@ -624,7 +624,7 @@
         },
         "is_hard_safety_limit": {
           "type": "boolean",
-          "description": "Copied from constraint_type for kind SAFETY; always false for kind STRUCTURAL."
+          "description": "Copied from constraint_types for kind SAFETY; always false for kind STRUCTURAL."
         },
         "message_key": {
           "type": "string",
