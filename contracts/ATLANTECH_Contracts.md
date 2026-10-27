@@ -157,7 +157,7 @@ components:
 3. If `must_change_password = true`: `POST /api/v1/auth/change-password`
 4. `POST /api/v1/auth/logout`
 
-The sign-in identifier is set by DEC-35 (proposed: username).
+The sign-in identifier is `username` (DEC-35, closed); users have no email.
 
 ```json
 // POST /api/v1/auth/login
