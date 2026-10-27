@@ -45,8 +45,8 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-32 | Availability semantics for pilots and tug masters | AI Team | Open | Sprint 3 |
 | DEC-33 | Manual-planning baseline | AI Team | Open | Sprint 7 |
 | DEC-34 | Building A4 rules on synthetic data | AI Team | Open | Sprint 3 |
-| DEC-35 | Sign-in identifier | Backend Team | Open | Sprint 1 |
-| DEC-36 | One role per user vs role history | Backend Team | Open | Sprint 2 |
+| DEC-35 | Sign-in identifier | Backend Team | Closed | Sprint 1 |
+| DEC-36 | One role per user vs role history | Backend Team | Closed | Sprint 2 |
 | DEC-37 | "Reject with reason" on P-44 and P-47 | Backend Team | Open | Sprint 6 |
 | DEC-38 | Where to activate the tide constituent set | UI/UX Team | Open | Sprint 3 |
 | DEC-39 | CT Supervisor status list | Backend Team | Open | Sprint 6 |
@@ -991,10 +991,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | Screens P-16/P-52 · FR-AC-01 · FR-AC-09 |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-35 · Sprint 1 |
 | Affects | P1-C1 · P1-C3 · FE-025 · MB-P52 |
-| Decision | ______ |
+| Decision | Closed (2026-10-28): Option 1. Users sign in with `username` on the web (P-16) and the tablet (P-52); the `users` table has no email column. `username` is unique and stored lowercase; `phone` is contact only and never used for sign-in. P-16 shows a Username field instead of Email. CT-03 and CT-04 use `{ "username", "password" }`. |
 
 <div dir="rtl">
 
@@ -1017,10 +1017,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | Screens P-24 · P2-E2 |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-36 · Sprint 2 |
 | Affects | P2-E2 · FE-045 |
-| Decision | ______ |
+| Decision | Closed (2026-10-28): Option 1. A user has one active role at a time. Assigning a new role ends the current one (`active_to` set) and inserts the new row in the same transaction; rows are never deleted, so `user_role_assignments` keeps the full history. Schema: `uq_ura_active` becomes unique on (`user_id`, `active_assignment_key`) so the database refuses a second active role. P-24 shows the active role and the history list. |
 
 <div dir="rtl">
 
