@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://atlantech.io/contracts/ai/c05-validation.schema.json",
   "title": "C-05 Validation payload (queue:validate)",
-  "description": "Payload of a VALIDATION job. subject_id is recommendation_option.id for OVERRIDE and terminal_recommendation.id for YARD_ADJUSTMENT. The worker only reads; the answer comes back in C-06 (validation_result). BAPLIE correction is not here: it is a BAPLIE_PARSE job with source = STAGED_PAYLOAD (CT-12).",
+  "description": "Payload of a VALIDATION job. subject_id is recommendation_options.id for OVERRIDE and terminal_recommendations.id for YARD_ADJUSTMENT. The worker only reads; the answer comes back in C-06 (validation_result). BAPLIE correction is not here: it is a BAPLIE_PARSE job with source = STAGED_PAYLOAD (CT-12).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -122,7 +122,7 @@
             "original_tugboat_id",
             "override_tugboat_id"
           ],
-          "description": "original null = tug added; override null = tug removed; both set = tug swapped (same meaning as recommendation_override).",
+          "description": "original null = tug added; override null = tug removed; both set = tug swapped (same meaning as recommendation_overrides).",
           "properties": {
             "component_type": {
               "const": "TUG"
