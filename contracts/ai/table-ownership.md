@@ -62,7 +62,7 @@ The AI creates the rows; the Backend changes only what is listed.
 | `solver_runs` | Backend (QUEUED, `solver_version` from `port_settings`) | UPDATE w_part2: status, objective_value, solve_time_ms, solver_version, result_detail, started_at, finished_at | `result_handled_at`; stale RUNNING → FAILED / TIMEOUT (sweeper, DEC-04) | All workers |
 | `terminal_recommendations` | Backend (YARD_PLACEMENT: YARD_REC_REQUESTED; reset on regeneration) | UPDATE w_yard: lifecycle_status, confidence, rationale_template_id, rationale_params, failure_reason | Decision, accept or reject, export; never the AI columns | All workers |
 | `vessels` | Backend | UPDATE w_edi: call_sign, flag_state | Everything except what the AI fills: `call_sign`, `flag_state` only when NULL | All workers |
-| `yard_runs` | Backend (QUEUED; old run → REPLACED) | UPDATE w_yard: status, outcome, error_category, result_detail, worker_version, started_at, finished_at | Old run → REPLACED; `result_handled_at`; stale RUNNING → FAILED / TIMEOUT (sweeper, DEC-04) | All workers |
+| `yard_runs` | Backend (QUEUED; old run → REPLACED) | UPDATE w_yard: status, outcome, error_category, retry_count, result_detail, worker_version, started_at, finished_at | Old run → REPLACED; `result_handled_at`; stale RUNNING → FAILED / TIMEOUT (sweeper, DEC-04) | All workers |
 
 ## 3. Backend-only tables the AI reads
 
@@ -148,7 +148,7 @@ The Backend writes these; workers have SELECT only.
 | --- | --- | --- | --- |
 | `w_part1` (`r_part1`) | `queue:part1` + Part 1 scheduler | `entry_window_proposals`, `feasible_windows`, `blocked_periods`, `forecast_runs`, `environment_forecast_points`, `tide_prediction_runs`, `tide_prediction_points`, `demand_forecast_slots` | `part1_runs` (status, outcome, retry_count, entry_window_proposal_id, started_at, finished_at) |
 | `w_part2` (`r_part2`) | `queue:part2` | `solver_run_model_versions`, `recommendations`, `recommendation_options`, `recommendation_option_tugs`, `recommendation_rationale_factors` | `solver_runs` (status, objective_value, solve_time_ms, solver_version, result_detail, started_at, finished_at) |
-| `w_yard` (`r_yard`) | `queue:yard` | `yard_placement_items` | `yard_runs` (status, outcome, error_category, result_detail, worker_version, started_at, finished_at)<br>`terminal_recommendations` (lifecycle_status, confidence, rationale_template_id, rationale_params, failure_reason) |
+| `w_yard` (`r_yard`) | `queue:yard` | `yard_placement_items` | `yard_runs` (status, outcome, error_category, retry_count, result_detail, worker_version, started_at, finished_at)<br>`terminal_recommendations` (lifecycle_status, confidence, rationale_template_id, rationale_params, failure_reason) |
 | `w_edi` (`r_edi`) | `queue:edi` | `baplie_parse_issues`, `containers`, `container_manifest_entries` | `baplie_parse_runs` (status, outcome, error_category, retry_count, container_count, result_detail, worker_version, started_at, finished_at)<br>`baplie_files` (parse_status, staged_payload)<br>`vessels` (call_sign, flag_state) |
 | `w_validate` (`r_validate`) | `queue:validate` | — | — |
 | `w_part3` (`r_part3`) | Part 3 scheduler (DEC-31) | `evaluation_metrics`, `drift_measurements` | — |
@@ -167,3 +167,4 @@ All six read every table in sections 1 to 3; none reads section 4.
 | Date | Change |
 | --- | --- |
 | 2026-10-28 | First published version, generated from `workers.sql` and CT-15 v1.1. `w_edi` gets UPDATE on `baplie_parse_runs.retry_count` so the grants match CT-15 (DEC-08 grants were missing it) |
+| 2026-10-28 | P1-B3: `w_yard` gets UPDATE on `yard_runs.retry_count` (CT-11 column; CT-08 "where granted"; DEC-04 one yard retry). Goes beyond CT-15 v1.1 `:1080` and the DEC-08 matrix `:289`: **needs AI Team approval** with a CT-15 / DEC-08 update before merge |
