@@ -2397,7 +2397,7 @@ GRANT SELECT (`mode`, `read_only_reason`) ON `license_states` TO 'r_edi';
 GRANT INSERT ON `baplie_parse_issues` TO 'r_edi';
 GRANT INSERT ON `containers` TO 'r_edi';
 GRANT INSERT ON `container_manifest_entries` TO 'r_edi';
-GRANT UPDATE (`status`, `outcome`, `error_category`, `container_count`, `result_detail`, `worker_version`, `started_at`, `finished_at`) ON `baplie_parse_runs` TO 'r_edi';
+GRANT UPDATE (`status`, `outcome`, `error_category`, `retry_count`, `container_count`, `result_detail`, `worker_version`, `started_at`, `finished_at`) ON `baplie_parse_runs` TO 'r_edi';
 GRANT UPDATE (`parse_status`, `staged_payload`) ON `baplie_files` TO 'r_edi';
 GRANT UPDATE (`call_sign`, `flag_state`) ON `vessels` TO 'r_edi';
 
