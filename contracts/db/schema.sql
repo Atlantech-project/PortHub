@@ -767,7 +767,7 @@ DROP TABLE IF EXISTS `license_states`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `license_states` (
-  `id` tinyint NOT NULL DEFAULT '1',
+  `id` bigint unsigned NOT NULL DEFAULT '1',
   `token` text COMMENT 'Current signed licence token',
   `license_ref` bigint unsigned DEFAULT NULL COMMENT 'SaaS license.id (no FK, other DB)',
   `plan_name` varchar(80) DEFAULT NULL,
@@ -985,6 +985,7 @@ DROP TABLE IF EXISTS `pilot_profiles`;
 CREATE TABLE `pilot_profiles` (
   `user_id` bigint unsigned NOT NULL,
   `pilot_rank` enum('FIRST','SECOND','THIRD') NOT NULL COMMENT 'FIRST = most senior',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`user_id`),
   CONSTRAINT `fk_pilot_profile_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='1:1 with user. App rule: user must hold MARINE_PILOT in MARINE_SERVICES (D-29).';
@@ -995,6 +996,7 @@ DROP TABLE IF EXISTS `pilot_rank_limits`;
 CREATE TABLE `pilot_rank_limits` (
   `pilot_rank` enum('FIRST','SECOND','THIRD') NOT NULL,
   `max_vessel_loa` decimal(7,2) DEFAULT NULL COMMENT 'Largest vessel LOA (m) this rank may pilot; NULL = no limit',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`pilot_rank`),
   CONSTRAINT `chk_pilot_rank_limit_loa` CHECK (((`max_vessel_loa` is null) or (`max_vessel_loa` > 0)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Settings screen: one row per rank.';
@@ -1057,7 +1059,7 @@ DROP TABLE IF EXISTS `port_profiles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `port_profiles` (
-  `id` tinyint NOT NULL DEFAULT '1',
+  `id` bigint unsigned NOT NULL DEFAULT '1',
   `public_id` char(36) NOT NULL COMMENT 'Same value as SaaS platform_port_registry.public_id (read-only)',
   `port_code` varchar(10) DEFAULT NULL COMMENT 'UN/LOCODE, from SaaS',
   `governorate_code` varchar(6) NOT NULL COMMENT 'ISO 3166-2:EG, same codes as SaaS governorate',
@@ -1711,6 +1713,7 @@ DROP TABLE IF EXISTS `tug_master_profiles`;
 CREATE TABLE `tug_master_profiles` (
   `user_id` bigint unsigned NOT NULL,
   `assigned_tugboat_id` bigint unsigned DEFAULT NULL COMMENT 'NULL = explicitly unassigned; UNIQUE = one master per tug (FR-1.1.2)',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `assigned_tugboat_id` (`assigned_tugboat_id`),
   CONSTRAINT `fk_tug_master_tugboat` FOREIGN KEY (`assigned_tugboat_id`) REFERENCES `tugboats` (`id`),
@@ -1768,7 +1771,7 @@ CREATE TABLE `user_devices` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_user_device` (`user_id`,`device_id`),
   UNIQUE KEY `uq_user_device_push_token` (`push_token`),
-  CONSTRAINT `user_devices_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_device_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
   CONSTRAINT `chk_ud_push_revoked` CHECK (((`revoked_at` is null) or (`push_token` is null)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Never deleted: revoked_at is set instead.';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1938,6 +1941,7 @@ CREATE TABLE `yard_slots` (
   `tier` int NOT NULL,
   `status` enum('ACTIVE','BLOCKED') NOT NULL DEFAULT 'ACTIVE' COMMENT 'Administrative only; occupied = container_id IS NOT NULL',
   `container_id` bigint unsigned DEFAULT NULL,
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_ys_id_block` (`id`,`yard_block_id`),
   UNIQUE KEY `uq_ys_position` (`yard_block_id`,`bay`,`row_no`,`tier`),
