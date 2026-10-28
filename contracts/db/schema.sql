@@ -78,6 +78,7 @@ CREATE TABLE `baplie_files` (
   `corrected_by` bigint unsigned DEFAULT NULL,
   `corrected_at` datetime DEFAULT NULL,
   `uploaded_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_bf_request_live_hash` (`berthing_request_id`,`live_hash_key`),
   UNIQUE KEY `active_request_key` (`active_request_key`),
@@ -212,6 +213,7 @@ CREATE TABLE `berthing_requests` (
   `deadweight_tonnes` int NOT NULL COMMENT 'DWT (tonnes), entered on the request form; input to the AI tug formula (OQ-15-1)',
   `status` enum('SUBMITTED','NEEDS_REVISION','PRELIMINARY_APPROVED','CUSTOMS_APPROVED','ENTRY_WINDOW_CONFIRMED','RECOMMENDATION_GENERATED','PLAN_CONFIRMED','PLAN_CANCELLED','COMPLETED','REJECTED','CANCELLED') NOT NULL DEFAULT 'SUBMITTED',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_br_id_terminal` (`id`,`requested_terminal_id`),
   UNIQUE KEY `uq_br_id_vessel` (`id`,`vessel_id`),
@@ -519,6 +521,7 @@ CREATE TABLE `entry_window_proposals` (
   `rejection_reason` varchar(500) DEFAULT NULL COMMENT 'Required when REJECTED (all windows rejected)',
   `rejected_by` bigint unsigned DEFAULT NULL,
   `rejected_at` datetime DEFAULT NULL,
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_ewp_id_request` (`id`,`berthing_request_id`),
   UNIQUE KEY `confirmed_key` (`confirmed_key`),
@@ -921,6 +924,7 @@ CREATE TABLE `operational_plans` (
   `active_key` bigint unsigned GENERATED ALWAYS AS (if((`status` = _utf8mb4'CONFIRMED'),`berthing_request_id`,NULL)) STORED COMMENT 'GENERATED (stored): IF(status = CONFIRMED, berthing_request_id, NULL)',
   `confirmed_by` bigint unsigned NOT NULL,
   `confirmed_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `active_key` (`active_key`),
   KEY `fk_op_option` (`recommendation_option_id`,`recommendation_id`),
@@ -962,10 +966,10 @@ CREATE TABLE `part1_runs` (
   `finished_at` datetime DEFAULT NULL,
   `result_handled_at` datetime DEFAULT NULL COMMENT 'Set by the Backend when it has handled the C-06 result (Backend only)',
   PRIMARY KEY (`id`),
-  KEY `part1_runs_berthing_request_id_foreign` (`berthing_request_id`),
-  KEY `part1_runs_entry_window_proposal_id_foreign` (`entry_window_proposal_id`),
-  CONSTRAINT `part1_runs_berthing_request_id_foreign` FOREIGN KEY (`berthing_request_id`) REFERENCES `berthing_requests` (`id`),
-  CONSTRAINT `part1_runs_entry_window_proposal_id_foreign` FOREIGN KEY (`entry_window_proposal_id`) REFERENCES `entry_window_proposals` (`id`),
+  KEY `fk_p1r_request` (`berthing_request_id`),
+  KEY `fk_p1r_proposal` (`entry_window_proposal_id`),
+  CONSTRAINT `fk_p1r_proposal` FOREIGN KEY (`entry_window_proposal_id`) REFERENCES `entry_window_proposals` (`id`),
+  CONSTRAINT `fk_p1r_request` FOREIGN KEY (`berthing_request_id`) REFERENCES `berthing_requests` (`id`),
   CONSTRAINT `chk_p1r_retry` CHECK ((`retry_count` between 0 and 3))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1036,6 +1040,7 @@ CREATE TABLE `plan_components` (
   `planned_start` datetime NOT NULL,
   `planned_end` datetime NOT NULL,
   `reservation_state` enum('RESERVED','RELEASED','CONSUMED') NOT NULL DEFAULT 'RESERVED' COMMENT 'RELEASED on plan cancellation',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_pc_id_type` (`id`,`component_type`),
   KEY `fk_pc_assigner` (`assigned_by`),
@@ -1243,9 +1248,9 @@ CREATE TABLE `recommendation_reviews` (
   `user_id` bigint unsigned NOT NULL,
   `viewed_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`recommendation_id`,`user_id`,`viewed_at`),
-  KEY `recommendation_reviews_user_id_foreign` (`user_id`),
-  CONSTRAINT `recommendation_reviews_recommendation_id_foreign` FOREIGN KEY (`recommendation_id`) REFERENCES `recommendations` (`id`),
-  CONSTRAINT `recommendation_reviews_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+  KEY `fk_rrv_user` (`user_id`),
+  CONSTRAINT `fk_rrv_rec` FOREIGN KEY (`recommendation_id`) REFERENCES `recommendations` (`id`),
+  CONSTRAINT `fk_rrv_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `recommendations`;
@@ -1262,6 +1267,7 @@ CREATE TABLE `recommendations` (
   `purpose` enum('INITIAL','DELAY_REPLAN') NOT NULL DEFAULT 'INITIAL',
   `active_key` bigint unsigned GENERATED ALWAYS AS (if(((`status` in (_utf8mb4'PENDING_REVIEW',_utf8mb4'MODIFIED_BY_STAFF',_utf8mb4'CONFIRMED')) and (`purpose` = _utf8mb4'INITIAL')),`berthing_request_id`,NULL)) STORED COMMENT 'GENERATED (stored): IF(status IN (PENDING_REVIEW, MODIFIED_BY_STAFF, CONFIRMED) AND purpose = INITIAL, berthing_request_id, NULL)',
   `generated_at` datetime NOT NULL,
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_rec_id_request` (`id`,`berthing_request_id`),
   UNIQUE KEY `uq_rec_id_terminal` (`id`,`terminal_id`),
@@ -1610,6 +1616,7 @@ CREATE TABLE `terminal_recommendations` (
   `rationale_template_id` bigint unsigned DEFAULT NULL,
   `confidence` decimal(4,3) DEFAULT NULL,
   `rationale_params` json DEFAULT NULL COMMENT 'Placeholder values for the rationale template, written by the worker',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_tr_id_type` (`id`,`rec_type`),
   UNIQUE KEY `uq_tr_rec_type` (`recommendation_id`,`rec_type`),
@@ -1841,6 +1848,7 @@ CREATE TABLE `vessels` (
   `moulded_depth` decimal(5,2) DEFAULT NULL COMMENT 'm. Nullable, same rule',
   `call_sign` varchar(10) DEFAULT NULL COMMENT 'Nullable',
   `flag_state` char(2) DEFAULT NULL COMMENT 'ISO 3166-1 alpha-2. Nullable',
+  `updated_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Version token for the 409 check (microseconds)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `imo_number` (`imo_number`),
   KEY `fk_vessel_type` (`vessel_type_id`),
@@ -2305,7 +2313,7 @@ GRANT SELECT ON `yard_zones` TO 'r_yard';
 GRANT SELECT (`id`, `name`, `is_active`) ON `users` TO 'r_yard';
 GRANT SELECT (`mode`, `read_only_reason`) ON `license_states` TO 'r_yard';
 GRANT INSERT ON `yard_placement_items` TO 'r_yard';
-GRANT UPDATE (`status`, `outcome`, `error_category`, `result_detail`, `worker_version`, `started_at`, `finished_at`) ON `yard_runs` TO 'r_yard';
+GRANT UPDATE (`status`, `outcome`, `error_category`, `retry_count`, `result_detail`, `worker_version`, `started_at`, `finished_at`) ON `yard_runs` TO 'r_yard';
 GRANT UPDATE (`lifecycle_status`, `confidence`, `rationale_template_id`, `rationale_params`, `failure_reason`) ON `terminal_recommendations` TO 'r_yard';
 
 -- ---------------------------------------------------------------- r_edi
