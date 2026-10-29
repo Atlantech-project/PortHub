@@ -23,7 +23,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-10 | Scope of the AI FastAPI service | AI Team | Closed | Sprint 1 |
 | DEC-11 | Redis persistence | Backend Team | Open | Sprint 3 |
 | DEC-12 | AI `port_settings` keys | AI Team | Closed | Sprint 1 |
-| DEC-13 | Who keeps the OpenAPI file current | Backend Team | Open | Sprint 1 |
+| DEC-13 | Who keeps the OpenAPI file current | Backend Team | Closed | Sprint 1 |
 | DEC-14 | C-01 · Part 1 run | AI Team | Closed | Sprint 1 |
 | DEC-15 | C-02 · Part 2 solve | AI Team | Closed | Sprint 1 |
 | DEC-16 | C-03 · Yard placement | AI Team | Closed | Sprint 1 |
@@ -425,10 +425,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | Backend open inputs |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-13 · Sprint 1 |
 | Affects | P1-A4 · CT-02 |
-| Decision | ______ |
+| Decision | Closed (2026-10-29): Option 1. The Backend Team is the single owner of the OpenAPI file (CT-02). Its source is project-backend `ATLANTECH/openapi/port-api.yaml`, published unchanged to PortHub `contracts/openapi/port-api.yaml` with `composer contracts:openapi`. Every backend PR that adds or changes an endpoint updates the file in the same PR, opens the paired PortHub PR, and the backend drift test and the Spectral CI check fail otherwise. The API readiness pack (CT-23) links the OpenAPI diff. Decided by Marwan (Backend lead) in P1-A4. |
 
 <div dir="rtl">
 
