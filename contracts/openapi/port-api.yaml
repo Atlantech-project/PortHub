@@ -29,10 +29,10 @@ components:
     cookieAuth:
       type: apiKey
       in: cookie
-      name: laravel_session
+      name: laravel-session
       description: >-
         Web app: Laravel session cookie (Sanctum SPA, CT-03). Writes also send the `X-XSRF-TOKEN` header
-        (parameter XsrfToken). The cookie name comes from SESSION_COOKIE.
+        (parameter XsrfToken). The name is config session.cookie (SESSION_COOKIE, else the slug of APP_NAME + -session).
     bearerAuth:
       type: http
       scheme: bearer
