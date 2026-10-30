@@ -14,7 +14,7 @@
 2. `POST /api/v1/auth/login` with `username` and password (DEC-35; users have no email).
 3. If `must_change_password` is `true`: `POST /api/v1/auth/change-password`.
 4. After a page reload: `GET /api/v1/auth/me` tells who is signed in.
-5. `POST /api/v1/auth/logout` (P1-C4).
+5. `POST /api/v1/auth/logout` ends the session: 204, and the next signed-in request is 401.
 
 Sign-in and password change both give a new session id. A stale CSRF token returns 419 `SESSION_EXPIRED`: fetch a new cookie and retry.
 
@@ -79,4 +79,4 @@ A deactivated user cannot sign in, and on the next request of an open session ge
 
 | Version | Date | Change |
 | --- | --- | --- |
-| v1.0 | 2026-10-30 | First version, matching the code (P1-C1, P1-C2) |
+| v1.0 | 2026-10-30 | First version, matching the code (P1-C1, P1-C2, web part of P1-C4) |
