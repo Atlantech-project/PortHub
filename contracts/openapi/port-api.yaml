@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '0.1.0'
+  version: '0.2.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -23,16 +23,79 @@ info:
 servers:
   - url: /
     description: The port server; paths carry the full /api/v1 prefix.
-paths: {}
+tags:
+  - name: Auth
+    description: Web sign-in with the Sanctum SPA session (CT-03). First call `GET /sanctum/csrf-cookie`.
+paths:
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: authLogin
+      summary: Web sign-in
+      description: >-
+        Signs a user in with `username` and password (DEC-35) and starts a new session (new session id).
+        Call `GET /sanctum/csrf-cookie` first and send its value as `X-XSRF-TOKEN`. The username is trimmed and
+        lowercased. A wrong username and a wrong password get the same 401, with the `detail` "The username or password is incorrect.". A user with `must_change_password`
+        still signs in, with the flag set; the password-change gate comes with P1-C2. Throttled at 5 failed
+        attempts per minute per username and IP, and 20 per minute per IP. A request whose Origin or Referer is
+        not a web-app origin the server treats as stateful (SANCTUM_STATEFUL_DOMAINS) has no session to start and
+        answers 400 BAD_REQUEST before the credentials are checked.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Signed in; the response sets the session cookie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/AccountDisabled'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      operationId: authMe
+      summary: Signed-in user's profile
+      description: >-
+        The profile of the user the session belongs to, the same shape as the sign-in answer. The web app calls it
+        after a page reload to know who is signed in.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: The signed-in user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
 components:
   securitySchemes:
     cookieAuth:
       type: apiKey
       in: cookie
-      name: laravel-session
+      name: atlantech_session
       description: >-
         Web app: Laravel session cookie (Sanctum SPA, CT-03). Writes also send the `X-XSRF-TOKEN` header
-        (parameter XsrfToken). The name is config session.cookie (SESSION_COOKIE, else the slug of APP_NAME + -session).
+        (parameter XsrfToken). The name is config session.cookie (SESSION_COOKIE, default atlantech_session).
     bearerAuth:
       type: http
       scheme: bearer
@@ -134,6 +197,7 @@ components:
         - VALIDATION_FAILED
         - VERSION_CONFLICT
         - UNAUTHENTICATED
+        - SESSION_EXPIRED
         - FORBIDDEN
         - NOT_FOUND
         - METHOD_NOT_ALLOWED
@@ -210,6 +274,45 @@ components:
           properties:
             min_app_version:
               type: string
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: Trimmed and lowercased by the server before it is checked.
+          example: staff.ahmed
+        password:
+          type: string
+          maxLength: 255
+          format: password
+    UserProfile:
+      type: object
+      description: The signed-in user (CT-03). One active role (DEC-36); `role` is null when the user has none.
+      required: [id, name, role, terminal_ids, must_change_password]
+      properties:
+        id:
+          type: integer
+          example: 41
+        name:
+          type: string
+          example: Port Staff
+        role:
+          type: string
+          nullable: true
+          enum: [PORT_GM, PORT_STAFF, MARINE_SAFETY_OFFICER, PILOTAGE_MANAGER, PILOTAGE_OFFICER, MARINE_PILOT, TUG_MANAGER, TUG_OFFICER, TUG_MASTER, TERMINAL_ADMIN, TERMINAL_OFFICER, TERMINAL_SUPERVISOR, null]
+          example: PORT_STAFF
+        terminal_ids:
+          type: array
+          description: The terminal of a TERMINAL role; empty for every other role.
+          items:
+            type: integer
+          example: []
+        must_change_password:
+          type: boolean
+          example: false
   responses:
     ValidationFailed:
       description: '422 VALIDATION_FAILED'
@@ -256,6 +359,19 @@ components:
             code: UNAUTHENTICATED
             message_key: errors.unauthenticated
             detail: 'You are not signed in, or your session has expired. Sign in and try again.'
+    SessionExpired:
+      description: '419 SESSION_EXPIRED'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://atlantech.io/errors/session-expired
+            title: 'Session expired'
+            status: 419
+            code: SESSION_EXPIRED
+            message_key: errors.session_expired
+            detail: 'Your session security token has expired. Reload the page and try again.'
     Forbidden:
       description: '403 FORBIDDEN'
       content:
