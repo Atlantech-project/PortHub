@@ -123,6 +123,8 @@ components:
 3. If `must_change_password = true`: `POST /api/v1/auth/change-password`
 4. `POST /api/v1/auth/logout`
 
+Full text: [`auth-web.md`](auth-web.md), which wins over this summary.
+
 The sign-in identifier is `username` (DEC-35, closed); users have no email.
 
 ```json
@@ -133,7 +135,7 @@ The sign-in identifier is `username` (DEC-35, closed); users have no email.
 {
   "id": 41,
   "name": "Port Staff",
-  "role": "PORT_AUTHORITY_STAFF",
+  "role": "PORT_STAFF",
   "terminal_ids": [],
   "must_change_password": false
 }

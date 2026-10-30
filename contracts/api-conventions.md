@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.1 |
+| Version | v1.2 |
 | Status | Approved |
 | Owner | Backend Team |
 | Reviewers | Frontend Team · Mobile Team, critical changes only ([README](README.md)) |
@@ -101,7 +101,7 @@ Rules:
 | 422 | The data was refused | `VALIDATION_FAILED`, `IDEMPOTENCY_KEY_REUSED`, `PLAN_LIMIT_EXCEEDED` (reserved) |
 | 423 | Reserved: the licence is read-only; the licence work is deferred (DEC-54) | `LICENSE_READ_ONLY` |
 | 426 | Mobile app older than the port's minimum | `APP_UPDATE_REQUIRED` |
-| 429 | Sign-in throttling only; carries `Retry-After` | `TOO_MANY_ATTEMPTS` |
+| 429 | Sign-in and password-change throttling only; carries `Retry-After` | `TOO_MANY_ATTEMPTS` |
 | 500 | Unexpected failure, with no details | `SERVER_ERROR` |
 | 503 | Temporarily unavailable; may carry `Retry-After` | `SERVICE_UNAVAILABLE` |
 
@@ -328,5 +328,6 @@ Response header: `Retry-After: 60`
 
 | Version | Date | Change |
 | --- | --- | --- |
+| v1.2 | 2026-10-30 | 429 also covers password-change throttling (P1-C2) |
 | v1.1 | 2026-10-30 | Review rule: Frontend and Mobile review critical changes only; QA tests and does not review |
 | v1.0 | 2026-10-30 | First version, written to match the code on `develop` (P1-A2, P1-A4, P1-C1) |
