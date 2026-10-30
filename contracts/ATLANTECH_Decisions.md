@@ -57,7 +57,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-44 | Storing the clock-skew review note | Backend Team | Open | Sprint 6 |
 | DEC-45 | Display time zone | Frontend Team | Open | Sprint 1 |
 | DEC-46 | Supported browsers and viewports | Frontend Team | Open | Sprint 1 |
-| DEC-47 | Backend environment for development and testing | Backend Team | Open | Sprint 2 |
+| DEC-47 | Backend environment for development and testing | Backend Team | Closed | Sprint 2 |
 | DEC-48 | Field roles on the web | Leads Council | Open | Sprint 2 |
 | DEC-49 | Status and error colours and the icon set | UI/UX Team | Closed | — |
 | DEC-50 | BAPLIE correction and withdraw | Leads Council | Closed | — |
@@ -1302,10 +1302,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | FE-OQ-29 |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-47 · Sprint 2 |
 | Affects | FE-101 · MB-F4B · QA-01 |
-| Decision | ______ |
+| Decision | Closed (2026-10-29): Option 1 as the target. A shared dev server is updated on every merge to `develop`, and a separate demo on every release; the host and the deployment come with P6-R6 (or earlier if a host becomes available). Until then Frontend, Mobile and QA run the backend from `develop` on their own machine with `docker compose --profile server up -d --build` (app, nginx, MySQL 8.4, Redis 7.4; no local PHP needed; http://localhost:8000). Seed data arrives with P1-B6. Decided by Marwan (Backend lead). |
 
 <div dir="rtl">
 
