@@ -1,6 +1,6 @@
 # ATLANTECH — Decisions, Conflicts and Open Points
 
-This file lists every decision that must be closed before implementation, every conflict between the source documents, and every open point. Each item has a fixed ID from `DEC-01` to `DEC-56`.
+This file lists every decision that must be closed before implementation, every conflict between the source documents, and every open point. Each item has a fixed ID from `DEC-01` to `DEC-57`.
 
 - **Closing task:** has the same ID as the item and belongs to the owner team. It sits in the sprint where the first task that needs the decision starts, and is closed at that sprint's FRR or earlier.
 - **Status:** `Open` needs a decision by its closing sprint. `Closed` is already settled and kept for reference.
@@ -67,6 +67,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-54 | Licence, SaaS and READ_ONLY in the task files | Leads Council | Closed | — |
 | DEC-55 | TIMING and NCT recommendation producers | Leads Council | Closed | — |
 | DEC-56 | SaaS API location and licence signing key | Leads Council | Closed | — |
+| DEC-57 | Port API status codes, error catalogue and version token | Backend Team | Closed | — |
 
 ## Backend–AI integration decisions
 
@@ -1501,3 +1502,22 @@ This file lists every decision that must be closed before implementation, every 
 </div>
 
 **Topic.** Both belong to SaaS and licensing.
+
+### DEC-57 · Port API status codes, error catalogue and version token
+
+| | |
+| --- | --- |
+| Source | CT-01 draft and FR-GL-08 vs the code; NFR-CONC-1 vs FR-GL-05 |
+| Owner | Backend Team |
+| Status | Closed |
+| Closing task | CT-01 |
+| Affects | FR-GL-08 · NFR-CONC-1 · CT-01 · P1-A2 · P1-C1 · P2-D4 · FE-030 |
+| Decision | Closed: (1) the API status set adds 400, 404, 405, 419, 429 and 500 to FR-GL-08's list, with 423 reserved (DEC-54). (2) Stable codes live in `contracts/error-codes.md`. (3) The version token is `updated_at DATETIME(6)`, returned as `version`, not an integer. (4) v1.0 of CT-01 is adopted by the Backend lead without Frontend, Mobile or QA review; every later change goes through their review. |
+
+<div dir="rtl">
+
+**القصة.** الـ FR-GL-08 كان بيعد 7 أكواد بس، والـ API بيرجع أكواد تانية زي 404 و 405 و 419. فاتسجلت القايمة الكاملة، والأكواد الثابتة اتنقلت لملف لوحدها. وكمان الـ NFR-CONC-1 كان بيقول version رقم، والـ FR-GL-05 بيقول `updated_at`، فاتثبت `updated_at` بدقة الـ microseconds.
+
+</div>
+
+**Topic.** The full API status set, one error catalogue file, and one version token.
