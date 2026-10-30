@@ -71,7 +71,8 @@ All contracts are written and approved in **Sprint 1**. Each contract has a task
 | --- | --- |
 | Between | Backend → Frontend · Mobile · QA |
 | Owner | Backend Team (single owner, DEC-13) |
-| Reviewers | Frontend Team · Mobile Team |
+| Reviewers | Frontend Team · Mobile Team · QA Team |
+| Status | Approved v1.0.0 · 2026-10-30 by Marwan (Backend lead), without team review; those teams review every later change |
 | Output | `contracts/openapi/port-api.yaml` (OpenAPI 3.0), updated in the same PR that changes an endpoint |
 
 **Example:**
