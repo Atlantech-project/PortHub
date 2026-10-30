@@ -2,11 +2,11 @@
 
 | | |
 | --- | --- |
-| Version | v1.0-draft |
-| Status | Draft, under review |
+| Version | v1.0 |
+| Status | Approved |
 | Owner | Backend Team |
-| Reviewers | Frontend Team · Mobile Team · QA Team |
-| Approved by | Not yet approved |
+| Reviewers (from v1.1) | Frontend Team · Mobile Team · QA Team |
+| Approved by | Marwan (Backend lead), 2026-10-30. Adopted without Frontend, Mobile or QA review; those teams review every change from now on (DEC-57) |
 | Error codes | [`error-codes.md`](error-codes.md) |
 
 These rules apply to every endpoint of the port API under `/api/v1`. The endpoints themselves are in [`openapi/port-api.yaml`](openapi/port-api.yaml) (CT-02). How this file changes is in [`README.md`](README.md).
@@ -328,4 +328,4 @@ Response header: `Retry-After: 60`
 
 | Version | Date | Change |
 | --- | --- | --- |
-| v1.0-draft | 2026-10-30 | First draft, written to match the code on `develop` (P1-A2, P1-A4, P1-C1) |
+| v1.0 | 2026-10-30 | First version, written to match the code on `develop` (P1-A2, P1-A4, P1-C1) |

@@ -2,11 +2,11 @@
 
 | | |
 | --- | --- |
-| Version | v1.0-draft |
-| Status | Draft, under review |
+| Version | v1.0 |
+| Status | Approved |
 | Owner | Backend Team |
-| Reviewers | Frontend Team · Mobile Team · QA Team |
-| Approved by | Not yet approved |
+| Reviewers (from v1.1) | Frontend Team · Mobile Team · QA Team |
+| Approved by | Marwan (Backend lead), 2026-10-30. Adopted without Frontend, Mobile or QA review; those teams review every change from now on (DEC-57) |
 | Rules | [`api-conventions.md`](api-conventions.md), section 6 |
 
 Every stable error code the port API returns. A code, its HTTP status and its `message_key` never change once approved.
@@ -52,4 +52,4 @@ These are message keys, not codes. They give a more specific message under one o
 
 | Version | Date | Change |
 | --- | --- | --- |
-| v1.0-draft | 2026-10-30 | First draft: 17 codes, matching `ErrorCode` on `develop` (P1-A2, P1-C1) |
+| v1.0 | 2026-10-30 | First version: 17 codes, matching `ErrorCode` on `develop` (P1-A2, P1-C1) |
