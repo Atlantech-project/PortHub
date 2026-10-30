@@ -35,8 +35,8 @@ paths:
       description: >-
         Signs a user in with `username` and password (DEC-35) and starts a new session (new session id).
         Call `GET /sanctum/csrf-cookie` first and send its value as `X-XSRF-TOKEN`. The username is trimmed and
-        lowercased. A wrong username and a wrong password get the same 401. A user with `must_change_password`
-        still signs in; everything else then answers 403 PASSWORD_CHANGE_REQUIRED (P1-C2). Throttled at 5 failed
+        lowercased. A wrong username and a wrong password get the same 401, with the `detail` "The username or password is incorrect.". A user with `must_change_password`
+        still signs in, with the flag set; the password-change gate comes with P1-C2. Throttled at 5 failed
         attempts per minute per username and IP, and 20 per minute per IP. A request whose Origin or Referer is
         not a web-app origin the server treats as stateful (SANCTUM_STATEFUL_DOMAINS) has no session to start and
         answers 400 BAD_REQUEST before the credentials are checked.
