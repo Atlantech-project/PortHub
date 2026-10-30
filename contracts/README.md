@@ -24,8 +24,16 @@ Every contract file carries its version and status in its header, and a change l
   2. An entry in the decision log.
   3. A new version number and a change-log line.
 - **Major version** (`v2.0`): a breaking change. On the API this also means a new base path (`/api/v2`) served alongside `/api/v1`.
-- **Minor version** (`v1.1`): an addition that breaks nobody. Adding an error code to `error-codes.md` is a minor change made in the PR of the task that introduces the code; the consuming teams review the PR, and no decision-log entry is needed.
+- **Minor version** (`v1.1`): an addition that breaks nobody. Adding an error code to `error-codes.md` is a minor change made in the PR of the task that introduces the code; it needs no review and no decision-log entry.
 - A code, its HTTP status and its `message_key` never change once approved. Retiring one is a breaking change.
+
+### Port API contracts (CT-01, CT-02)
+
+The Backend Team's code is the source of truth, and the clients build on it. So these two contracts replace the "both sides" condition above:
+
+- Frontend and Mobile review **critical changes only**: a breaking change, or a change to a rule or shape they already build on.
+- Any other change needs no team review and no decision-log entry, only a new version and a change-log line.
+- QA tests against these contracts and does not review them.
 
 ## Working here
 
