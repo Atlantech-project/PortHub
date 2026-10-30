@@ -15,7 +15,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-02 | Who writes status transitions, history, audit and run rows | Backend Team | Closed | Sprint 1 |
 | DEC-03 | Location of the shared validation rule sets (override, yard adjustment, BAPLIE correction, window re-check) | AI Team | Closed | Sprint 1 |
 | DEC-04 | Job envelope, versioning, retries and stale-run timeout | AI Team | Closed | Sprint 1 |
-| DEC-05 | SSE source for the dashboard | Backend Team | Open | Sprint 1 |
+| DEC-05 | SSE source for the dashboard | Backend Team | Closed | Sprint 1 |
 | DEC-06 | Joint solve scope: which requests may change per trigger | AI Team | Closed | Sprint 1 |
 | DEC-07 | Storing a NO_FEASIBLE_WINDOW result | AI Team | Open | Sprint 5 |
 | DEC-08 | Database read source and worker privileges | Backend Team | Closed | Sprint 1 |
@@ -183,10 +183,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | D-06 |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-05 · Sprint 1 |
 | Affects | P3-I4 · FE-033 · CT-05 |
-| Decision | ______ |
+| Decision | Closed (2026-10-30): Option 1. A Laravel streamed endpoint, `GET /api/v1/events`, filtered by role and terminal, with `Last-Event-ID` catch-up from a short-lived Redis store. Reverb for mobile only. Risk for P3-I4: each open browser holds a PHP worker, so limit the connection time and size the worker pool. |
 
 <div dir="rtl">
 
