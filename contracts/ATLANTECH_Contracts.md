@@ -55,48 +55,13 @@ All contracts are written and approved in **Sprint 1**. Each contract has a task
 | Reviewers | Frontend Team · Mobile Team · QA Team |
 | Output | `contracts/api-conventions.md` |
 
-**Content:**
+**Full text:** [`api-conventions.md`](api-conventions.md) and [`error-codes.md`](error-codes.md). Those files win over this summary.
 
-- **Base path:** `/api/v1`. All times are ISO 8601 in UTC.
-- **Headers:**
-  - Web: cookie + `X-XSRF-TOKEN`.
-  - Mobile: `Authorization: Bearer <token>`, `X-App-Version` and `X-Device-Id`.
-  - Every mobile write carries an `Idempotency-Key`.
-- **Version token:** every editable record returns a `version` (the `updated_at` value). Every update must send it back; a stale version returns 409.
-- **Errors:** RFC 9457 format with a stable `code` and a `message_key`.
-- **Error codes:** 401 · 403 · 409 · 422 · 426 · 503.
-- **Pagination:** `?page=&per_page=`.
-
-**Error example:**
-
-```json
-{
-  "type": "https://atlantech.io/errors/version-conflict",
-  "title": "Record changed",
-  "status": 409,
-  "code": "VERSION_CONFLICT",
-  "message_key": "errors.version_conflict",
-  "detail": "The berth was changed by another user.",
-  "current": { "id": 12, "version": "2026-11-02T10:15:04Z" }
-}
-```
-
-**422 example:**
-
-```json
-{
-  "status": 422,
-  "code": "VALIDATION_FAILED",
-  "message_key": "errors.validation_failed",
-  "errors": { "max_vessel_loa": ["errors.berth.loa_exceeds_length"] }
-}
-```
-
-**Pagination example:**
-
-```json
-{ "data": [ { "id": 1 } ], "meta": { "page": 1, "per_page": 25, "total": 132 } }
-```
+- **Base path:** `/api/v1`. All times are ISO 8601 in UTC with microseconds on output.
+- **Headers:** web uses the cookie and `X-XSRF-TOKEN`; mobile uses `Authorization: Bearer <token>`, `X-App-Version`, `X-Device-Id` and, on writes, `Idempotency-Key`.
+- **Version token:** every editable record returns `version` (the `updated_at` value) and every update sends it back; a stale value returns 409.
+- **Errors:** RFC 9457 with a stable `code` and a `message_key` (DEC-57).
+- **Pagination:** `?page=&per_page=` with `meta`.
 
 ---
 
