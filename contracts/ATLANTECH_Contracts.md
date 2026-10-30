@@ -52,7 +52,7 @@ All contracts are written and approved in **Sprint 1**. Each contract has a task
 | --- | --- |
 | Between | Backend → Frontend · Mobile · QA |
 | Owner | Backend Team |
-| Reviewers | Frontend Team · Mobile Team · QA Team |
+| Reviewers | Frontend Team · Mobile Team, critical changes only (DEC-57) |
 | Output | `contracts/api-conventions.md` |
 
 **Full text:** [`api-conventions.md`](api-conventions.md) and [`error-codes.md`](error-codes.md). Those files win over this summary.
@@ -71,7 +71,8 @@ All contracts are written and approved in **Sprint 1**. Each contract has a task
 | --- | --- |
 | Between | Backend → Frontend · Mobile · QA |
 | Owner | Backend Team (single owner, DEC-13) |
-| Reviewers | Frontend Team · Mobile Team |
+| Reviewers | Frontend Team · Mobile Team, critical changes only (DEC-57) |
+| Status | Approved v1.0.0 · 2026-10-30 by Marwan (Backend lead), without team review |
 | Output | `contracts/openapi/port-api.yaml` (OpenAPI 3.0), updated in the same PR that changes an endpoint |
 
 **Example:**
