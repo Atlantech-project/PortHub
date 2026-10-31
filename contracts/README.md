@@ -17,7 +17,7 @@ This folder is the single source of truth for what the ATLANTECH teams (Backend,
 | [`ATLANTECH_Contracts.md`](ATLANTECH_Contracts.md) | All contracts CT-01 to CT-26: summary, owners, reviewers and the text of those without a file of their own | Backend Team, with each contract's owner |
 | [`ATLANTECH_Decisions.md`](ATLANTECH_Decisions.md) | The decision log (`DEC-xx`) | Leads Council |
 | [`ai/`](ai/) | AI payload schemas and the Data Ownership Matrix (CT-15) | Backend and AI Teams |
-| [`db/`](db/) | The schema snapshot and the table names | Backend Team |
+| [`db/`](db/) | The schema snapshot, the table names and the reference seed rows (CT-18) | Backend Team |
 
 ## Versioning
 

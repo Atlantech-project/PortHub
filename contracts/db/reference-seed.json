@@ -1,0 +1,422 @@
+{
+  "spec_version": "1.0",
+  "imdg_classes": [
+    {
+      "code": "1.1",
+      "name": "Explosives: mass explosion hazard"
+    },
+    {
+      "code": "1.2",
+      "name": "Explosives: projection hazard"
+    },
+    {
+      "code": "1.3",
+      "name": "Explosives: fire hazard"
+    },
+    {
+      "code": "1.4",
+      "name": "Explosives: no significant hazard"
+    },
+    {
+      "code": "1.5",
+      "name": "Explosives: very insensitive"
+    },
+    {
+      "code": "1.6",
+      "name": "Explosives: extremely insensitive"
+    },
+    {
+      "code": "2.1",
+      "name": "Flammable gases"
+    },
+    {
+      "code": "2.2",
+      "name": "Non-flammable, non-toxic gases"
+    },
+    {
+      "code": "2.3",
+      "name": "Toxic gases"
+    },
+    {
+      "code": "3",
+      "name": "Flammable liquids"
+    },
+    {
+      "code": "4.1",
+      "name": "Flammable solids"
+    },
+    {
+      "code": "4.2",
+      "name": "Spontaneously combustible substances"
+    },
+    {
+      "code": "4.3",
+      "name": "Substances dangerous when wet"
+    },
+    {
+      "code": "5.1",
+      "name": "Oxidizing substances"
+    },
+    {
+      "code": "5.2",
+      "name": "Organic peroxides"
+    },
+    {
+      "code": "6.1",
+      "name": "Toxic substances"
+    },
+    {
+      "code": "6.2",
+      "name": "Infectious substances"
+    },
+    {
+      "code": "7",
+      "name": "Radioactive material"
+    },
+    {
+      "code": "8",
+      "name": "Corrosive substances"
+    },
+    {
+      "code": "9",
+      "name": "Miscellaneous dangerous substances"
+    }
+  ],
+  "container_size_types": [
+    {
+      "code": "22G1",
+      "length_ft": 20,
+      "is_high_cube": false,
+      "type_group": "GENERAL",
+      "teu_factor": 1
+    },
+    {
+      "code": "22R1",
+      "length_ft": 20,
+      "is_high_cube": false,
+      "type_group": "REEFER",
+      "teu_factor": 1
+    },
+    {
+      "code": "22T1",
+      "length_ft": 20,
+      "is_high_cube": false,
+      "type_group": "TANK",
+      "teu_factor": 1
+    },
+    {
+      "code": "22U1",
+      "length_ft": 20,
+      "is_high_cube": false,
+      "type_group": "OPEN_TOP",
+      "teu_factor": 1
+    },
+    {
+      "code": "22P1",
+      "length_ft": 20,
+      "is_high_cube": false,
+      "type_group": "FLAT_RACK",
+      "teu_factor": 1
+    },
+    {
+      "code": "42G1",
+      "length_ft": 40,
+      "is_high_cube": false,
+      "type_group": "GENERAL",
+      "teu_factor": 2
+    },
+    {
+      "code": "42R1",
+      "length_ft": 40,
+      "is_high_cube": false,
+      "type_group": "REEFER",
+      "teu_factor": 2
+    },
+    {
+      "code": "42T1",
+      "length_ft": 40,
+      "is_high_cube": false,
+      "type_group": "TANK",
+      "teu_factor": 2
+    },
+    {
+      "code": "42U1",
+      "length_ft": 40,
+      "is_high_cube": false,
+      "type_group": "OPEN_TOP",
+      "teu_factor": 2
+    },
+    {
+      "code": "42P1",
+      "length_ft": 40,
+      "is_high_cube": false,
+      "type_group": "FLAT_RACK",
+      "teu_factor": 2
+    },
+    {
+      "code": "45G1",
+      "length_ft": 40,
+      "is_high_cube": true,
+      "type_group": "GENERAL",
+      "teu_factor": 2
+    },
+    {
+      "code": "45R1",
+      "length_ft": 40,
+      "is_high_cube": true,
+      "type_group": "REEFER",
+      "teu_factor": 2
+    },
+    {
+      "code": "L5G1",
+      "length_ft": 45,
+      "is_high_cube": true,
+      "type_group": "GENERAL",
+      "teu_factor": 2.25
+    }
+  ],
+  "vessel_types": [
+    {
+      "code": "CONTAINER",
+      "name": "Container ship"
+    },
+    {
+      "code": "GENERAL_CARGO",
+      "name": "General cargo ship"
+    },
+    {
+      "code": "BULK_CARRIER",
+      "name": "Bulk carrier"
+    },
+    {
+      "code": "TANKER",
+      "name": "Tanker"
+    },
+    {
+      "code": "LNG_CARRIER",
+      "name": "LNG carrier"
+    },
+    {
+      "code": "RO_RO",
+      "name": "Ro-ro ship"
+    }
+  ],
+  "cargo_types": [
+    {
+      "code": "CONTAINERS",
+      "name": "Containers",
+      "category": "CONTAINERIZED",
+      "imdg_class": null,
+      "min_temperature": null,
+      "max_temperature": null
+    },
+    {
+      "code": "GENERAL",
+      "name": "General cargo",
+      "category": "GENERAL_CARGO",
+      "imdg_class": null,
+      "min_temperature": null,
+      "max_temperature": null
+    },
+    {
+      "code": "BREAK_BULK",
+      "name": "Break bulk",
+      "category": "BREAK_BULK",
+      "imdg_class": null,
+      "min_temperature": null,
+      "max_temperature": null
+    },
+    {
+      "code": "DRY_BULK",
+      "name": "Dry bulk",
+      "category": "DRY_BULK",
+      "imdg_class": null,
+      "min_temperature": null,
+      "max_temperature": null
+    },
+    {
+      "code": "LIQUID_BULK",
+      "name": "Liquid bulk",
+      "category": "LIQUID_BULK",
+      "imdg_class": null,
+      "min_temperature": null,
+      "max_temperature": null
+    },
+    {
+      "code": "LNG",
+      "name": "Liquefied natural gas",
+      "category": "GAS",
+      "imdg_class": "2.1",
+      "min_temperature": null,
+      "max_temperature": null
+    },
+    {
+      "code": "RO_RO",
+      "name": "Ro-ro cargo",
+      "category": "RO_RO",
+      "imdg_class": null,
+      "min_temperature": null,
+      "max_temperature": null
+    }
+  ],
+  "yard_zone_types": [
+    {
+      "code": "GENERAL",
+      "name": "General",
+      "zone_detail": "NONE"
+    },
+    {
+      "code": "REEFER",
+      "name": "Reefer",
+      "zone_detail": "REEFER"
+    },
+    {
+      "code": "DANGEROUS_GOODS",
+      "name": "Dangerous goods",
+      "zone_detail": "DANGEROUS_GOODS"
+    },
+    {
+      "code": "OOG",
+      "name": "Out of gauge",
+      "zone_detail": "OOG"
+    }
+  ],
+  "storage_types": [
+    {
+      "code": "CONTAINER_YARD",
+      "name": "Container yard",
+      "detail_kind": "CONTAINER_YARD"
+    },
+    {
+      "code": "WAREHOUSE",
+      "name": "Warehouse",
+      "detail_kind": "WAREHOUSE"
+    },
+    {
+      "code": "TANK",
+      "name": "Tank",
+      "detail_kind": "TANK"
+    },
+    {
+      "code": "OPEN_STORAGE",
+      "name": "Open storage",
+      "detail_kind": "NONE"
+    }
+  ],
+  "capability_types": [
+    {
+      "code": "LIFTING_CAPACITY",
+      "name": "Lifting capacity",
+      "unit": "TONNES"
+    },
+    {
+      "code": "OUTREACH",
+      "name": "Outreach",
+      "unit": "METRES"
+    },
+    {
+      "code": "MOVES_RATE",
+      "name": "Handling rate",
+      "unit": "MOVES_PER_HOUR"
+    },
+    {
+      "code": "FLOW_RATE",
+      "name": "Flow rate",
+      "unit": "CUBIC_METRES_PER_HOUR"
+    }
+  ],
+  "equipment_categories": [
+    {
+      "code": "STS_CRANE",
+      "name": "Ship-to-shore crane",
+      "equipment_role": "VESSEL_HANDLING"
+    },
+    {
+      "code": "MOBILE_HARBOUR_CRANE",
+      "name": "Mobile harbour crane",
+      "equipment_role": "VESSEL_HANDLING"
+    },
+    {
+      "code": "RTG",
+      "name": "Rubber-tyred gantry crane",
+      "equipment_role": "CARGO_TRANSPORT"
+    },
+    {
+      "code": "REACH_STACKER",
+      "name": "Reach stacker",
+      "equipment_role": "CARGO_TRANSPORT"
+    },
+    {
+      "code": "TERMINAL_TRACTOR",
+      "name": "Terminal tractor",
+      "equipment_role": "CARGO_TRANSPORT"
+    },
+    {
+      "code": "PIPELINE",
+      "name": "Pipeline",
+      "equipment_role": "TRANSFER_SYSTEM"
+    }
+  ],
+  "status_types": [
+    {
+      "component_type": "BERTH",
+      "code": "STARTED",
+      "name": "In progress"
+    },
+    {
+      "component_type": "BERTH",
+      "code": "DONE",
+      "name": "Executed"
+    },
+    {
+      "component_type": "PILOT",
+      "code": "STARTED",
+      "name": "In progress"
+    },
+    {
+      "component_type": "PILOT",
+      "code": "DONE",
+      "name": "Executed"
+    },
+    {
+      "component_type": "TUG",
+      "code": "STARTED",
+      "name": "In progress"
+    },
+    {
+      "component_type": "TUG",
+      "code": "DONE",
+      "name": "Executed"
+    },
+    {
+      "component_type": "TERMINAL_OPS",
+      "code": "STARTED",
+      "name": "In progress"
+    },
+    {
+      "component_type": "TERMINAL_OPS",
+      "code": "DONE",
+      "name": "Executed"
+    }
+  ],
+  "external_systems": [
+    {
+      "code": "EGMSW",
+      "name": "Egyptian Maritime Single Window"
+    }
+  ],
+  "port_settings": [
+    {
+      "setting_key": "reminder_lead_minutes",
+      "value_type": "INT",
+      "value": "120",
+      "description": "Lead time of the pre-execution reminder"
+    },
+    {
+      "setting_key": "min_app_version",
+      "value_type": "STRING",
+      "value": "1.0.0",
+      "description": "Oldest mobile app version allowed; older apps get 426"
+    }
+  ]
+}
