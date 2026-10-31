@@ -1415,7 +1415,10 @@ With `NO_FEASIBLE_PLAN`, `recommendation_id`, `version`, `version_no`, `status`,
 | Between | Backend → Frontend · Mobile · QA |
 | Owner | Backend Team |
 | Reviewers | Frontend Team · Mobile Team · QA Team at the FRR |
-| Output | `contracts/readiness/FT-xx.md` for each feature |
+| Status | Approved v1.0 · 2026-10-31 by Marwan (Backend lead), without team review. The teams still review each pack at its FRR |
+| Output | `contracts/readiness/FT-xx.md` for each feature, built from [`readiness/TEMPLATE.md`](readiness/TEMPLATE.md) |
+
+**Full template:** [`readiness/TEMPLATE.md`](readiness/TEMPLATE.md), which wins over this summary.
 
 ```markdown
 # FT-06 Berthing requests and BAPLIE — API readiness pack
