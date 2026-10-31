@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.2 |
+| Version | v1.3 |
 | Status | Approved |
 | Owner | Backend Team |
 | Reviewers | Frontend Team · Mobile Team, critical changes only ([README](README.md)) |
@@ -46,6 +46,7 @@ The web client gets the CSRF cookie from `GET /sanctum/csrf-cookie`. A missing o
 - Same key and a different body: 422 `IDEMPOTENCY_KEY_REUSED`.
 - A missing or malformed key: 422 `VALIDATION_FAILED`.
 - Sync events do not use this header; they keep `client_event_id` (CT-07).
+- `POST /api/v1/auth/mobile/login` (CT-04) and `POST /api/v1/broadcasting/auth` (CT-06) do not use this header either, so a token or a signature is never replayed.
 
 ## 5. Version token
 
@@ -328,6 +329,7 @@ Response header: `Retry-After: 60`
 
 | Version | Date | Change |
 | --- | --- | --- |
+| v1.3 | 2026-10-31 | Mobile sign-in and channel authorisation do not use `Idempotency-Key` (CT-04, CT-06) |
 | v1.2 | 2026-10-30 | 429 also covers password-change throttling (P1-C2) |
 | v1.1 | 2026-10-30 | Review rule: Frontend and Mobile review critical changes only; QA tests and does not review |
 | v1.0 | 2026-10-30 | First version, written to match the code on `develop` (P1-A2, P1-A4, P1-C1) |

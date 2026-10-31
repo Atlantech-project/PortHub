@@ -9,6 +9,10 @@ This folder is the single source of truth for what the ATLANTECH teams (Backend,
 | [`api-conventions.md`](api-conventions.md) | CT-01: the rules every port API endpoint follows (base path, time, headers, idempotency, version token, errors, pagination) | Backend Team |
 | [`error-codes.md`](error-codes.md) | CT-01: the catalogue of stable error codes | Backend Team |
 | [`auth-web.md`](auth-web.md) | CT-03: web sign-in, password change and session | Backend Team |
+| [`realtime-sse.md`](realtime-sse.md) | CT-05: web SSE events | Backend Team |
+| [`realtime-mobile.md`](realtime-mobile.md) | CT-06: mobile WebSocket events | Backend Team |
+| [`sync-events.md`](sync-events.md) | CT-07: mobile sync (Outbox) | Backend and Mobile Teams |
+| [`mock-workers.md`](mock-workers.md) | CT-19: mock worker behaviour | Backend Team |
 | [`openapi/port-api.yaml`](openapi/port-api.yaml) | CT-02: the port API OpenAPI file | Backend Team |
 | [`ATLANTECH_Contracts.md`](ATLANTECH_Contracts.md) | All contracts CT-01 to CT-26: summary, owners, reviewers and the text of those without a file of their own | Backend Team, with each contract's owner |
 | [`ATLANTECH_Decisions.md`](ATLANTECH_Decisions.md) | The decision log (`DEC-xx`) | Leads Council |
