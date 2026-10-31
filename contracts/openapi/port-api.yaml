@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.0.0'
+  version: '1.1.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -36,7 +36,7 @@ paths:
         Signs a user in with `username` and password (DEC-35) and starts a new session (new session id).
         Call `GET /sanctum/csrf-cookie` first and send its value as `X-XSRF-TOKEN`. The username is trimmed and
         lowercased. A wrong username and a wrong password get the same 401, with the `detail` "The username or password is incorrect.". A user with `must_change_password`
-        still signs in, with the flag set; the password-change gate comes with P1-C2. Throttled at 5 failed
+        still signs in, with the flag set, and must then call `POST /api/v1/auth/change-password`. Throttled at 5 failed
         attempts per minute per username and IP, and 20 per minute per IP. A request whose Origin or Referer is
         not a web-app origin the server treats as stateful (SANCTUM_STATEFUL_DOMAINS) has no session to start and
         answers 400 BAD_REQUEST before the credentials are checked.
@@ -75,7 +75,8 @@ paths:
       summary: Signed-in user's profile
       description: >-
         The profile of the user the session belongs to, the same shape as the sign-in answer. The web app calls it
-        after a page reload to know who is signed in.
+        after a page reload to know who is signed in. It stays open while `must_change_password` is set, and a
+        deactivated user gets 403 and is signed out.
       security:
         - cookieAuth: []
       responses:
@@ -87,6 +88,65 @@ paths:
                 $ref: '#/components/schemas/UserProfile'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/AccountDisabled'
+  /api/v1/auth/change-password:
+    post:
+      tags: [Auth]
+      operationId: authChangePassword
+      summary: Change the signed-in user's password
+      description: >-
+        Saves the new password, clears `must_change_password` and starts a new session id. While the flag is set, every
+        signed-in route except this one, `auth/me` and logout answers 403 PASSWORD_CHANGE_REQUIRED. The new password
+        has at least 8 characters with letters and numbers, and differs from the current one. Throttled at 5 requests
+        per minute per user.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Changed; the updated profile, with `must_change_password` false.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/AccountDisabled'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: authLogout
+      summary: Web sign-out
+      description: >-
+        Ends the web session. It stays open while `must_change_password` is set. The next signed-in request is 401.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      responses:
+        '204':
+          description: Signed out.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/AccountDisabled'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
 components:
   securitySchemes:
     cookieAuth:
@@ -274,6 +334,18 @@ components:
           properties:
             min_app_version:
               type: string
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password, new_password_confirmation]
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+          minLength: 8
+          maxLength: 255
+        new_password_confirmation:
+          type: string
     LoginRequest:
       type: object
       required: [username, password]
@@ -481,7 +553,7 @@ components:
             message_key: errors.plan_limit_exceeded
             detail: 'This would exceed a limit of the port plan. Contact your port administrator.'
     TooManyAttempts:
-      description: '429 TOO_MANY_ATTEMPTS. Sign-in throttling only (CT-01 plan Q1).'
+      description: '429 TOO_MANY_ATTEMPTS. Sign-in and password-change throttling only.'
       headers:
         Retry-After:
           $ref: '#/components/headers/RetryAfter'

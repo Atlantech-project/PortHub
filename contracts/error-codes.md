@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.1 |
+| Version | v1.2 |
 | Status | Approved |
 | Owner | Backend Team |
 | Reviewers | Frontend Team · Mobile Team, critical changes only ([README](README.md)) |
@@ -36,7 +36,7 @@ A new code is added in the PR of the task that introduces it, with a minor versi
 | `PLAN_LIMIT_EXCEEDED` | `errors.plan_limit_exceeded` | 422 | Reserved: the write would exceed a plan limit (DEC-54) | P1-A2 |
 | `LICENSE_READ_ONLY` | `errors.license_read_only` | 423 | Reserved: the licence is read-only, so writes are blocked (DEC-54) | P1-A2 |
 | `APP_UPDATE_REQUIRED` | `errors.app_update_required` | 426 | The mobile app is older than the port's minimum; the body carries `min_app_version` | P1-A2 |
-| `TOO_MANY_ATTEMPTS` | `errors.too_many_attempts` | 429 | Sign-in throttling; carries `Retry-After` | P1-A2 |
+| `TOO_MANY_ATTEMPTS` | `errors.too_many_attempts` | 429 | Sign-in and password-change throttling; carries `Retry-After` | P1-A2 |
 | `SERVER_ERROR` | `errors.server_error` | 500 | Unexpected failure, with no details | P1-A2 |
 | `SERVICE_UNAVAILABLE` | `errors.service_unavailable` | 503 | Temporarily unavailable; may carry `Retry-After` | P1-A2 |
 
@@ -52,5 +52,6 @@ These are message keys, not codes. They give a more specific message under one o
 
 | Version | Date | Change |
 | --- | --- | --- |
+| v1.2 | 2026-10-30 | 429 also covers password-change throttling (P1-C2) |
 | v1.1 | 2026-10-30 | Review rule: Frontend and Mobile review critical changes only; QA tests and does not review |
 | v1.0 | 2026-10-30 | First version: 17 codes, matching `ErrorCode` on `develop` (P1-A2, P1-C1) |
