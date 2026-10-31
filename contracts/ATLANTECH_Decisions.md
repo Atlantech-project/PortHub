@@ -160,7 +160,7 @@ This file lists every decision that must be closed before implementation, every 
 | Status | Closed |
 | Closing task | DEC-04 · Sprint 1 |
 | Affects | P3-I1 · AI-011 · CT-08 |
-| Decision | Closed (2026-10-27): Option 1. JSON envelope pushed with RPUSH on unprefixed queue names (`queue:part1`, `queue:part2`, `queue:yard`, `queue:edi`, `queue:validate`), `contract_version = "1.0"`; payload schemas per job type referenced from `envelope.schema.json` (CT-08). Retries: Part 1 up to `part1_max_retries` (3), other jobs once, VALIDATION never. A run RUNNING longer than `run_stale_after_seconds` is marked FAILED / TIMEOUT by the Backend sweeper (`part1_run_timeout_seconds` from DEC-14 is dropped). Full envelope, worker and error-category rules in CT-08 v1.0 (proposed 2026-10-27, awaiting Backend Team sign-off). |
+| Decision | Closed (2026-10-27): Option 1. JSON envelope pushed with RPUSH on unprefixed queue names (`queue:part1`, `queue:part2`, `queue:yard`, `queue:edi`, `queue:validate`), `contract_version = "1.0"`; payload schemas per job type referenced from `envelope.schema.json` (CT-08). Retries: Part 1 up to `part1_max_retries` (3), other jobs once, VALIDATION never. A run RUNNING longer than `run_stale_after_seconds` is marked FAILED / TIMEOUT by the Backend sweeper (`part1_run_timeout_seconds` from DEC-14 is dropped). Full envelope, worker and error-category rules in CT-08 v1.0 (approved 2026-10-30 on Backend Team sign-off). |
 
 <div dir="rtl">
 
