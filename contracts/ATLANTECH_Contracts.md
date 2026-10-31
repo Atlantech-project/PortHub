@@ -274,7 +274,7 @@ data: {"entity":"berthing_request","id":1550,"recommendation_id":880,"status":"R
 | Owner | AI Team (JSON Schema) · Backend Team (sending with RPUSH) |
 | Reviewers | Backend Team · AI Team |
 | Output | `contracts/ai/envelope.schema.json` |
-| Status | Proposed v1.0 · 2026-10-27 (DEC-04). Consolidates the envelope rules already approved in CT-09 to CT-14 and CT-16; becomes Approved on Backend Team sign-off |
+| Status | Approved v1.0 · 2026-10-30 on Backend Team sign-off (DEC-04). Consolidates the envelope rules already approved in CT-09 to CT-14 and CT-16 |
 
 The envelope is the outer JSON message for every job the Backend sends to an AI worker. Each job type's payload has its own schema (C-01 to C-05); this contract covers everything around it. The completion message going the other way is C-06 (CT-14).
 
