@@ -1368,17 +1368,30 @@ With `NO_FEASIBLE_PLAN`, `recommendation_id`, `version`, `version_no`, `status`,
 | Between | Backend → Frontend · Mobile · AI · QA |
 | Owner | Backend Team (from the PHP enums) |
 | Reviewers | All teams |
-| Output | `contracts/status-vocabulary.json`, generated automatically from the enums |
+| Status | Approved v1.0 · 2026-10-31 by Marwan (Backend lead), without team review |
+| Output | `contracts/status-vocabulary.json`, generated automatically from the enums with `composer contracts:status-vocabulary` |
+
+**Full list:** [`status-vocabulary.json`](status-vocabulary.json), which wins over this example. Nobody edits it by hand.
 
 ```json
 {
-  "berthing_requests.status": ["SUBMITTED","NEEDS_REVISION","PRELIMINARY_APPROVED","CUSTOMS_APPROVED","ENTRY_WINDOW_CONFIRMED","RECOMMENDATION_GENERATED","PLAN_CONFIRMED","PLAN_CANCELLED","COMPLETED","REJECTED","CANCELLED"],
-  "plan_components.status": ["UNASSIGNED","ASSIGNED","STARTED","DONE"],
-  "recommendations.status": ["PENDING_REVIEW","MODIFIED_BY_STAFF","CONFIRMED","REPLACED"],
-  "notification.status": ["SENT","FAILED","ESCALATED"],
-  "terminal_recommendations.lifecycle_status": ["YARD_REC_REQUESTED","YARD_REC_GENERATED","GENERATION_FAILED","ACCEPTED","REJECTED","EXPORTED_TO_TOS"]
+  "version": "1.0",
+  "columns": {
+    "berthing_requests.status": ["SUBMITTED","NEEDS_REVISION","PRELIMINARY_APPROVED","CUSTOMS_APPROVED","ENTRY_WINDOW_CONFIRMED","RECOMMENDATION_GENERATED","PLAN_CONFIRMED","PLAN_CANCELLED","COMPLETED","REJECTED","CANCELLED"],
+    "notification_logs.status": ["SENT","FAILED","ACKNOWLEDGED"],
+    "recommendations.status": ["PENDING_REVIEW","CONFIRMED","REJECTED","INVALIDATED","REPLACED","MODIFIED_BY_STAFF"],
+    "terminal_recommendations.lifecycle_status": ["YARD_REC_REQUESTED","YARD_REC_GENERATED","GENERATION_FAILED","YARD_REC_ACCEPTED","YARD_REC_REJECTED","EXPORTED_TO_TOS"]
+  },
+  "derived": {
+    "plan_components.derived_status": ["UNASSIGNED","ASSIGNED","STARTED","DONE"]
+  }
 }
 ```
+
+- `columns` lists every enum column in the database. `derived` lists values that have no column.
+- `plan_components` has no `status` column. The value is derived from the assignment and the latest `actual_status_updates` row (CT-07). CT-07 returns `ASSIGNED`, `STARTED` or `DONE`, because a field task always has an assignee. The name `derived_status` exists only in this file; the CT-07 field is `status`.
+- `ESCALATED` is not a status: an escalation is a `notification_logs` row of type `ACK_ESCALATION` (DEC-58).
+- `actual_status_updates.status` is not listed: it is a `VARCHAR` checked against the `status_types` rows.
 
 ---
 
@@ -1417,7 +1430,10 @@ With `NO_FEASIBLE_PLAN`, `recommendation_id`, `version`, `version_no`, `status`,
 | Between | Backend → Frontend · Mobile · QA |
 | Owner | Backend Team |
 | Reviewers | Frontend Team · Mobile Team · QA Team at the FRR |
-| Output | `contracts/readiness/FT-xx.md` for each feature |
+| Status | Approved v1.0 · 2026-10-31 by Marwan (Backend lead), without team review. The teams still review each pack at its FRR |
+| Output | `contracts/readiness/FT-xx.md` for each feature, built from [`readiness/TEMPLATE.md`](readiness/TEMPLATE.md) |
+
+**Full template:** [`readiness/TEMPLATE.md`](readiness/TEMPLATE.md), which wins over this summary.
 
 ```markdown
 # FT-06 Berthing requests and BAPLIE — API readiness pack

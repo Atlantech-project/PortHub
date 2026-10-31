@@ -1,0 +1,636 @@
+{
+    "version": "1.0",
+    "columns": {
+        "actual_status_updates.component_type": [
+            "BERTH",
+            "PILOT",
+            "TUG",
+            "TERMINAL_OPS"
+        ],
+        "actual_status_updates.sync_source": [
+            "MOBILE",
+            "TABLET",
+            "WEB",
+            "EXTERNAL"
+        ],
+        "audit_logs.action": [
+            "CREATE",
+            "UPDATE",
+            "DELETE",
+            "STATUS_CHANGE",
+            "SAFETY_EXCEPTION",
+            "REJECTED_ATTEMPT"
+        ],
+        "baplie_files.parse_status": [
+            "PENDING",
+            "PARSED",
+            "FAILED",
+            "QUARANTINED"
+        ],
+        "baplie_files.status": [
+            "STAGED",
+            "ACTIVE",
+            "REPLACED",
+            "WITHDRAWN"
+        ],
+        "baplie_parse_issues.severity": [
+            "ERROR",
+            "WARNING"
+        ],
+        "baplie_parse_runs.error_category": [
+            "INVALID_ENVELOPE",
+            "PRECONDITION_FAILED",
+            "DATA_UNAVAILABLE",
+            "CONFIGURATION_ERROR",
+            "TIMEOUT",
+            "INTERNAL_ERROR"
+        ],
+        "baplie_parse_runs.outcome": [
+            "PARSED",
+            "QUARANTINED",
+            "REJECTED"
+        ],
+        "baplie_parse_runs.source": [
+            "FILE",
+            "STAGED_PAYLOAD"
+        ],
+        "baplie_parse_runs.status": [
+            "QUEUED",
+            "RUNNING",
+            "DONE",
+            "FAILED",
+            "REPLACED"
+        ],
+        "berthing_request_cargos.operation": [
+            "DISCHARGE",
+            "LOAD"
+        ],
+        "berthing_request_cargos.quantity_unit": [
+            "TONNES",
+            "CUBIC_METRES",
+            "UNITS"
+        ],
+        "berthing_request_status_histories.from_status": [
+            "SUBMITTED",
+            "NEEDS_REVISION",
+            "PRELIMINARY_APPROVED",
+            "CUSTOMS_APPROVED",
+            "ENTRY_WINDOW_CONFIRMED",
+            "RECOMMENDATION_GENERATED",
+            "PLAN_CONFIRMED",
+            "PLAN_CANCELLED",
+            "COMPLETED",
+            "REJECTED",
+            "CANCELLED"
+        ],
+        "berthing_request_status_histories.to_status": [
+            "SUBMITTED",
+            "NEEDS_REVISION",
+            "PRELIMINARY_APPROVED",
+            "CUSTOMS_APPROVED",
+            "ENTRY_WINDOW_CONFIRMED",
+            "RECOMMENDATION_GENERATED",
+            "PLAN_CONFIRMED",
+            "PLAN_CANCELLED",
+            "COMPLETED",
+            "REJECTED",
+            "CANCELLED"
+        ],
+        "berthing_requests.draft_source": [
+            "MANUAL",
+            "EGMSW_FEED",
+            "REGISTRY"
+        ],
+        "berthing_requests.eta_source": [
+            "MANUAL",
+            "EGMSW_FEED",
+            "REGISTRY"
+        ],
+        "berthing_requests.ports_source": [
+            "MANUAL",
+            "EGMSW_FEED",
+            "REGISTRY"
+        ],
+        "berthing_requests.source": [
+            "MANUAL",
+            "EXTERNAL"
+        ],
+        "berthing_requests.status": [
+            "SUBMITTED",
+            "NEEDS_REVISION",
+            "PRELIMINARY_APPROVED",
+            "CUSTOMS_APPROVED",
+            "ENTRY_WINDOW_CONFIRMED",
+            "RECOMMENDATION_GENERATED",
+            "PLAN_CONFIRMED",
+            "PLAN_CANCELLED",
+            "COMPLETED",
+            "REJECTED",
+            "CANCELLED"
+        ],
+        "berths.status": [
+            "ACTIVE",
+            "MAINTENANCE",
+            "INACTIVE"
+        ],
+        "capability_types.unit": [
+            "TONNES",
+            "METRES",
+            "TONNES_PER_HOUR",
+            "CUBIC_METRES_PER_HOUR",
+            "MOVES_PER_HOUR",
+            "COUNT",
+            "BAR"
+        ],
+        "cargo_types.category": [
+            "GENERAL_CARGO",
+            "BREAK_BULK",
+            "DRY_BULK",
+            "LIQUID_BULK",
+            "GAS",
+            "RO_RO",
+            "CONTAINERIZED"
+        ],
+        "constraint_types.category": [
+            "ENVIRONMENTAL",
+            "UKC",
+            "VESSEL_SAFETY"
+        ],
+        "constraint_types.comparator": [
+            "MAX_ALLOWED",
+            "MIN_REQUIRED"
+        ],
+        "constraint_types.unit": [
+            "KNOTS",
+            "METRES_PER_SECOND",
+            "METRES",
+            "NAUTICAL_MILES",
+            "PERCENT",
+            "DEGREES",
+            "MINUTES",
+            "TONNES"
+        ],
+        "container_manifest_entries.full_empty": [
+            "FULL",
+            "EMPTY"
+        ],
+        "container_size_types.type_group": [
+            "GENERAL",
+            "REEFER",
+            "TANK",
+            "OPEN_TOP",
+            "FLAT_RACK",
+            "VENTILATED",
+            "BULK"
+        ],
+        "demand_forecast_slots.method": [
+            "AGGREGATION",
+            "LIGHTGBM"
+        ],
+        "deviation_logs.deviation_type": [
+            "DELAY",
+            "RESOURCE_CHANGED",
+            "STATE_MISMATCH"
+        ],
+        "dg_zone_allowed_classes.zone_detail": [
+            "NONE",
+            "REEFER",
+            "DANGEROUS_GOODS",
+            "OOG"
+        ],
+        "drift_measurements.metric_type": [
+            "PSI",
+            "ROLLING_MAE"
+        ],
+        "entry_window_proposals.status": [
+            "PROPOSED",
+            "CONFIRMED",
+            "REPLACED",
+            "REJECTED"
+        ],
+        "equipment_categories.equipment_role": [
+            "VESSEL_HANDLING",
+            "CARGO_TRANSPORT",
+            "TRANSFER_SYSTEM"
+        ],
+        "evaluation_metrics.dataset_type": [
+            "HOLDOUT",
+            "ROLLING",
+            "PRODUCTION"
+        ],
+        "evaluation_metrics.metric_name": [
+            "MAE",
+            "OVERRIDE_RATE",
+            "WAIT_TIME",
+            "WINDOW_ACCURACY"
+        ],
+        "forecast_runs.current_speed_unit": [
+            "KNOTS",
+            "METRES_PER_SECOND",
+            "KM_PER_HOUR"
+        ],
+        "forecast_runs.provider_rank": [
+            "PRIMARY",
+            "SECONDARY",
+            "MANUAL"
+        ],
+        "forecast_runs.pull_type": [
+            "SCHEDULED",
+            "ON_DEMAND",
+            "MANUAL"
+        ],
+        "forecast_runs.status": [
+            "SUCCESS",
+            "FAILED"
+        ],
+        "forecast_runs.visibility_unit": [
+            "NAUTICAL_MILES",
+            "KILOMETRES",
+            "METRES"
+        ],
+        "forecast_runs.wind_speed_unit": [
+            "KNOTS",
+            "METRES_PER_SECOND",
+            "KM_PER_HOUR"
+        ],
+        "license_states.license_status": [
+            "PENDING",
+            "ACTIVE",
+            "SUSPENDED",
+            "EXPIRED",
+            "REVOKED"
+        ],
+        "license_states.mode": [
+            "SETUP",
+            "FULL",
+            "READ_ONLY"
+        ],
+        "license_states.port_status": [
+            "ONBOARDING",
+            "ACTIVE",
+            "SUSPENDED",
+            "OFFBOARDED"
+        ],
+        "license_states.read_only_reason": [
+            "NONE",
+            "NO_LICENSE",
+            "TOKEN_EXPIRED",
+            "SUSPENDED",
+            "REVOKED",
+            "INVALID_SIGNATURE",
+            "CLOCK_ROLLBACK",
+            "PORT_SUSPENDED",
+            "PORT_OFFBOARDED",
+            "LICENSE_NOT_YET_IN_EFFECT"
+        ],
+        "ml_model_versions.status": [
+            "CHALLENGER",
+            "CHAMPION",
+            "ARCHIVED",
+            "REJECTED"
+        ],
+        "ml_models.model_key": [
+            "M2_SERVICE_TIME",
+            "M3_DEMAND_FORECAST",
+            "M4_DELAY_RISK",
+            "FORECAST_BIAS_CORRECTION"
+        ],
+        "notification_logs.channel": [
+            "WEB",
+            "MOBILE",
+            "PUSH"
+        ],
+        "notification_logs.related_entity_type": [
+            "PLAN_COMPONENT",
+            "BERTHING_REQUEST",
+            "RECOMMENDATION",
+            "ENTRY_WINDOW_PROPOSAL",
+            "TUGBOAT",
+            "RETRAINING_RUN",
+            "LICENSE"
+        ],
+        "notification_logs.status": [
+            "SENT",
+            "FAILED",
+            "ACKNOWLEDGED"
+        ],
+        "notification_logs.type": [
+            "PLAN_ASSIGNMENT",
+            "PRE_EXECUTION_REMINDER",
+            "TUG_STILL_BUSY",
+            "ENTRY_WINDOW_READY",
+            "RECOMMENDATION_READY",
+            "PLAN_CANCELLED",
+            "RETRAINING_REVIEW_NEEDED",
+            "LICENSE_EXPIRY_WARNING",
+            "ACK_ESCALATION",
+            "YARD_RECOMMENDATION_READY",
+            "YARD_RECOMMENDATION_FAILED",
+            "DRIFT_ALERT"
+        ],
+        "oog_zone_details.zone_detail": [
+            "NONE",
+            "REEFER",
+            "DANGEROUS_GOODS",
+            "OOG"
+        ],
+        "operational_plans.status": [
+            "CONFIRMED",
+            "CANCELLED",
+            "COMPLETED"
+        ],
+        "organization_units.unit_type": [
+            "HARBOUR_AUTHORITY",
+            "MARINE_SERVICES",
+            "TERMINAL"
+        ],
+        "part1_runs.outcome": [
+            "WINDOWS_FOUND",
+            "NO_FEASIBLE_WINDOW",
+            "ENV_DATA_UNAVAILABLE"
+        ],
+        "part1_runs.status": [
+            "QUEUED",
+            "RUNNING",
+            "DONE",
+            "FAILED",
+            "REPLACED"
+        ],
+        "pilot_profiles.pilot_rank": [
+            "FIRST",
+            "SECOND",
+            "THIRD"
+        ],
+        "pilot_rank_limits.pilot_rank": [
+            "FIRST",
+            "SECOND",
+            "THIRD"
+        ],
+        "plan_components.component_type": [
+            "BERTH",
+            "PILOT",
+            "TUG",
+            "TERMINAL_OPS"
+        ],
+        "plan_components.reservation_state": [
+            "RESERVED",
+            "RELEASED",
+            "CONSUMED"
+        ],
+        "port_settings.value_type": [
+            "INT",
+            "DECIMAL",
+            "BOOL",
+            "STRING",
+            "JSON"
+        ],
+        "recommendation_options.service_time_method": [
+            "FORMULA",
+            "ML"
+        ],
+        "recommendation_overrides.component_type": [
+            "BERTH",
+            "PILOT",
+            "TUG",
+            "START_TIME"
+        ],
+        "recommendation_rationale_factors.factor_type": [
+            "CONSTRAINT",
+            "OBJECTIVE_TERM"
+        ],
+        "recommendations.purpose": [
+            "INITIAL",
+            "DELAY_REPLAN"
+        ],
+        "recommendations.source": [
+            "AI",
+            "FIFO"
+        ],
+        "recommendations.status": [
+            "PENDING_REVIEW",
+            "CONFIRMED",
+            "REJECTED",
+            "INVALIDATED",
+            "REPLACED",
+            "MODIFIED_BY_STAFF"
+        ],
+        "reefer_zone_details.zone_detail": [
+            "NONE",
+            "REEFER",
+            "DANGEROUS_GOODS",
+            "OOG"
+        ],
+        "retraining_runs.decision": [
+            "PROMOTED",
+            "KEPT_CHAMPION",
+            "FAILED"
+        ],
+        "solver_runs.status": [
+            "QUEUED",
+            "RUNNING",
+            "OPTIMAL",
+            "FEASIBLE",
+            "INFEASIBLE",
+            "ERROR"
+        ],
+        "solver_runs.trigger_type": [
+            "NEW_REQUEST",
+            "REPLAN",
+            "RESOURCE_CHANGE",
+            "MANUAL"
+        ],
+        "status_types.component_type": [
+            "BERTH",
+            "PILOT",
+            "TUG",
+            "TERMINAL_OPS"
+        ],
+        "storage_allocation_items.quantity_unit": [
+            "TONNES",
+            "CUBIC_METRES",
+            "SQUARE_METRES",
+            "TEU",
+            "UNITS"
+        ],
+        "storage_allocation_items.rec_type": [
+            "TIMING",
+            "YARD_PLACEMENT",
+            "STORAGE_ALLOCATION"
+        ],
+        "storage_facilities.capacity_unit": [
+            "TONNES",
+            "CUBIC_METRES",
+            "SQUARE_METRES",
+            "TEU",
+            "UNITS"
+        ],
+        "storage_facilities.detail_kind": [
+            "NONE",
+            "WAREHOUSE",
+            "CONTAINER_YARD",
+            "TANK"
+        ],
+        "storage_facilities.status": [
+            "ACTIVE",
+            "MAINTENANCE",
+            "INACTIVE"
+        ],
+        "storage_facilities.terminal_type": [
+            "CONTAINER",
+            "NON_CONTAINER"
+        ],
+        "storage_movements.direction": [
+            "IN",
+            "OUT"
+        ],
+        "storage_movements.source": [
+            "VESSEL_DISCHARGE",
+            "VESSEL_LOADING",
+            "MANUAL"
+        ],
+        "storage_types.detail_kind": [
+            "NONE",
+            "WAREHOUSE",
+            "CONTAINER_YARD",
+            "TANK"
+        ],
+        "tank_details.detail_kind": [
+            "NONE",
+            "WAREHOUSE",
+            "CONTAINER_YARD",
+            "TANK"
+        ],
+        "terminal_productivity_profiles.rate_unit": [
+            "MOVES_PER_HOUR",
+            "TONNES_PER_HOUR",
+            "CUBIC_METRES_PER_HOUR",
+            "UNITS_PER_HOUR"
+        ],
+        "terminal_productivity_profiles.terminal_type": [
+            "CONTAINER",
+            "NON_CONTAINER"
+        ],
+        "terminal_recommendations.decision": [
+            "PENDING",
+            "ACCEPTED",
+            "REJECTED",
+            "ADJUSTED"
+        ],
+        "terminal_recommendations.lifecycle_status": [
+            "YARD_REC_REQUESTED",
+            "YARD_REC_GENERATED",
+            "GENERATION_FAILED",
+            "YARD_REC_ACCEPTED",
+            "YARD_REC_REJECTED",
+            "EXPORTED_TO_TOS"
+        ],
+        "terminal_recommendations.rec_type": [
+            "TIMING",
+            "YARD_PLACEMENT",
+            "STORAGE_ALLOCATION"
+        ],
+        "terminal_recommendations.terminal_type": [
+            "CONTAINER",
+            "NON_CONTAINER"
+        ],
+        "terminals.terminal_type": [
+            "CONTAINER",
+            "NON_CONTAINER"
+        ],
+        "tugboats.status": [
+            "AVAILABLE",
+            "BUSY",
+            "MAINTENANCE",
+            "INACTIVE"
+        ],
+        "tugboats.tug_power_unit": [
+            "BOLLARD_PULL_TONNES",
+            "HP",
+            "KW"
+        ],
+        "user_devices.platform": [
+            "ANDROID",
+            "IOS"
+        ],
+        "user_role_assignments.role": [
+            "PORT_GM",
+            "PORT_STAFF",
+            "MARINE_SAFETY_OFFICER",
+            "PILOTAGE_MANAGER",
+            "PILOTAGE_OFFICER",
+            "MARINE_PILOT",
+            "TUG_MANAGER",
+            "TUG_OFFICER",
+            "TUG_MASTER",
+            "TERMINAL_ADMIN",
+            "TERMINAL_OFFICER",
+            "TERMINAL_SUPERVISOR"
+        ],
+        "user_role_assignments.unit_type": [
+            "HARBOUR_AUTHORITY",
+            "MARINE_SERVICES",
+            "TERMINAL"
+        ],
+        "warehouse_details.detail_kind": [
+            "NONE",
+            "WAREHOUSE",
+            "CONTAINER_YARD",
+            "TANK"
+        ],
+        "yard_placement_items.rec_type": [
+            "TIMING",
+            "YARD_PLACEMENT",
+            "STORAGE_ALLOCATION"
+        ],
+        "yard_runs.error_category": [
+            "INVALID_ENVELOPE",
+            "PRECONDITION_FAILED",
+            "DATA_UNAVAILABLE",
+            "CONFIGURATION_ERROR",
+            "INFEASIBLE",
+            "TIMEOUT",
+            "INTERNAL_ERROR"
+        ],
+        "yard_runs.outcome": [
+            "YARD_REC_GENERATED",
+            "GENERATION_FAILED"
+        ],
+        "yard_runs.status": [
+            "QUEUED",
+            "RUNNING",
+            "DONE",
+            "FAILED",
+            "REPLACED"
+        ],
+        "yard_slots.status": [
+            "ACTIVE",
+            "BLOCKED"
+        ],
+        "yard_zone_types.zone_detail": [
+            "NONE",
+            "REEFER",
+            "DANGEROUS_GOODS",
+            "OOG"
+        ],
+        "yard_zones.detail_kind": [
+            "NONE",
+            "WAREHOUSE",
+            "CONTAINER_YARD",
+            "TANK"
+        ],
+        "yard_zones.zone_detail": [
+            "NONE",
+            "REEFER",
+            "DANGEROUS_GOODS",
+            "OOG"
+        ]
+    },
+    "derived": {
+        "plan_components.derived_status": [
+            "UNASSIGNED",
+            "ASSIGNED",
+            "STARTED",
+            "DONE"
+        ]
+    }
+}

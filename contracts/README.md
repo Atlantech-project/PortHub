@@ -13,7 +13,9 @@ This folder is the single source of truth for what the ATLANTECH teams (Backend,
 | [`realtime-mobile.md`](realtime-mobile.md) | CT-06: mobile WebSocket events | Backend Team |
 | [`sync-events.md`](sync-events.md) | CT-07: mobile sync (Outbox) | Backend and Mobile Teams |
 | [`mock-workers.md`](mock-workers.md) | CT-19: mock worker behaviour | Backend Team |
+| [`status-vocabulary.json`](status-vocabulary.json) | CT-21: every enum value, generated from the PHP enums | Backend Team |
 | [`openapi/port-api.yaml`](openapi/port-api.yaml) | CT-02: the port API OpenAPI file | Backend Team |
+| [`readiness/`](readiness/TEMPLATE.md) | CT-23: the API readiness pack template and one pack per feature | Backend Team |
 | [`ATLANTECH_Contracts.md`](ATLANTECH_Contracts.md) | All contracts CT-01 to CT-26: summary, owners, reviewers and the text of those without a file of their own | Backend Team, with each contract's owner |
 | [`ATLANTECH_Decisions.md`](ATLANTECH_Decisions.md) | The decision log (`DEC-xx`) | Leads Council |
 | [`ai/`](ai/) | AI payload schemas and the Data Ownership Matrix (CT-15) | Backend and AI Teams |
