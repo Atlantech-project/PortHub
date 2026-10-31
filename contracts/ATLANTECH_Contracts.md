@@ -246,7 +246,7 @@ One private channel per user, `private-user.{user_id}`, with two types: `TASK_UP
 | Between | Mobile ↔ Backend |
 | Owner | Backend Team (endpoints) · Mobile Team (event shape) |
 | Reviewers | Mobile Team · Backend Team |
-| Status | Draft v1.0: waiting for the Mobile Team to approve the event shape |
+| Status | Approved v1.1 · 2026-10-31 by Marwan (Backend lead) and Farouk (Mobile Team), on PortHub PR #27 |
 | Output | `contracts/sync-events.md`. The paths go into `port-api.yaml` when P5-O1 and P5-O2 build them (CT-02) |
 
 **Full text:** [`sync-events.md`](sync-events.md), which wins over this summary.

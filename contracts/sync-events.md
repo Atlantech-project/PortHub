@@ -2,8 +2,9 @@
 
 | | |
 | --- | --- |
-| Version | v1.0 |
-| Status | Draft: waiting for the Mobile Team to approve the event shape |
+| Version | v1.1 |
+| Status | Approved |
+| Approved by | Marwan (Backend lead) and Farouk (Mobile Team), 2026-10-31, on PortHub PR #27 |
 | Owner | Backend Team (endpoints) · Mobile Team (event shape) |
 | Reviewers | Mobile Team · Backend Team |
 | Built by | P5-O1 · P5-O2 · P5-O3 · P5-O4 · P5-O5 · P5-O8 |
@@ -35,7 +36,7 @@
 | `type` | `STATUS_UPDATE` · `ACKNOWLEDGE` |
 | `reported_at` | When it happened on the ground. CT-01 input format |
 | `client_sent_at` | Device clock when this request was sent. CT-01 input format |
-| `sync_source` | `MOBILE` · `TABLET`, the device class |
+| `sync_source` | `MOBILE` · `TABLET`, the device class. The app always sends it: `TABLET` when the shortest display side is 600 dp or more, otherwise `MOBILE` |
 
 ## 2. Event types
 
@@ -161,5 +162,5 @@ An `OVERRIDDEN` or `CANCELLED` task stays in `tasks` during those 24 hours, so t
 
 | Version | Date | Change |
 | --- | --- | --- |
-| v1.0 | 2026-10-31 | Mobile Team review: acknowledgement across re-sends, `system_label`, the values of `component_type` and `plan_status`, and the limits of `INVALID_EVENT` and 422 (DEC-58) |
+| v1.1 | 2026-10-31 | Mobile Team review: acknowledgement across re-sends, `system_label`, the values of `component_type` and `plan_status`, and the limits of `INVALID_EVENT` and 422 (DEC-58) |
 | v1.0 | 2026-10-31 | First version: event rules, results, reason codes, 100 event limit and the shape of `tasks` and `notifications` |
