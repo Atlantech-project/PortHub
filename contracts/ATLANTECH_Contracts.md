@@ -1387,7 +1387,7 @@ With `NO_FEASIBLE_PLAN`, `recommendation_id`, `version`, `version_no`, `status`,
 ```
 
 - `columns` lists every enum column in the database. `derived` lists values that have no column.
-- `plan_components` has no `status` column. The value is derived from the assignment and the latest `actual_status_updates` row (CT-07). CT-07 returns `ASSIGNED`, `STARTED` or `DONE`, because a field task always has an assignee.
+- `plan_components` has no `status` column. The value is derived from the assignment and the latest `actual_status_updates` row (CT-07). CT-07 returns `ASSIGNED`, `STARTED` or `DONE`, because a field task always has an assignee. The name `derived_status` exists only in this file; the CT-07 field is `status`.
 - `ESCALATED` is not a status: an escalation is a `notification_logs` row of type `ACK_ESCALATION` (DEC-58).
 - `actual_status_updates.status` is not listed: it is a `VARCHAR` checked against the `status_types` rows.
 
