@@ -21,7 +21,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-08 | Database read source and worker privileges | Backend Team | Closed | Sprint 1 |
 | DEC-09 | Where deviation thresholds live | Backend Team | Open | Sprint 6 |
 | DEC-10 | Scope of the AI FastAPI service | AI Team | Closed | Sprint 1 |
-| DEC-11 | Redis persistence | Backend Team | Open | Sprint 3 |
+| DEC-11 | Redis persistence | Backend Team | Closed | Sprint 3 |
 | DEC-12 | AI `port_settings` keys | AI Team | Closed | Sprint 1 |
 | DEC-13 | Who keeps the OpenAPI file current | Backend Team | Closed | Sprint 1 |
 | DEC-14 | C-01 · Part 1 run | AI Team | Closed | Sprint 1 |
@@ -49,12 +49,12 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-36 | One role per user vs role history | Backend Team | Closed | Sprint 2 |
 | DEC-37 | "Reject with reason" on P-44 and P-47 | Backend Team | Open | Sprint 6 |
 | DEC-38 | Where to activate the tide constituent set | UI/UX Team | Open | Sprint 3 |
-| DEC-39 | CT Supervisor status list | Backend Team | Open | Sprint 6 |
-| DEC-40 | Mobile Acknowledge event type and payload | Backend Team | Open | Sprint 6 |
+| DEC-39 | CT Supervisor status list | Backend Team | Closed | Sprint 6 |
+| DEC-40 | Mobile Acknowledge event type and payload | Backend Team | Closed | Sprint 6 |
 | DEC-41 | Automatic sync right after saving an event while online | Mobile Team | Open | Sprint 4 |
 | DEC-42 | Staff pages on the tablet and a provisioning screen | Leads Council | Open | Sprint 2 |
 | DEC-43 | Recommendation confidence field on P-38 | AI Team | Open | Sprint 6 |
-| DEC-44 | Storing the clock-skew review note | Backend Team | Open | Sprint 6 |
+| DEC-44 | Storing the clock-skew review note | Backend Team | Closed | Sprint 6 |
 | DEC-45 | Display time zone | Frontend Team | Open | Sprint 1 |
 | DEC-46 | Supported browsers and viewports | Frontend Team | Open | Sprint 1 |
 | DEC-47 | Backend environment for development and testing | Backend Team | Closed | Sprint 2 |
@@ -68,6 +68,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-55 | TIMING and NCT recommendation producers | Leads Council | Closed | — |
 | DEC-56 | SaaS API location and licence signing key | Leads Council | Closed | — |
 | DEC-57 | Port API status codes, error catalogue and version token | Backend Team | Closed | — |
+| DEC-58 | Field task details from the CT-07 Mobile review | Backend Team | Closed | — |
 
 ## Backend–AI integration decisions
 
@@ -373,10 +374,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | AIBD-029 |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-11 · Sprint 3 |
 | Affects | P3-I2 · P6-R6 |
-| Decision | ______ |
+| Decision | Closed (2026-10-31): Option 1. AOF enabled with `appendfsync everysec`, and the P3-I2 sweeper as the safety net. The SSE catch-up store (CT-05) stays short-lived: a client whose events are lost gets `RESYNC`. |
 
 <div dir="rtl">
 
@@ -1097,10 +1098,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | Screens P-55 · Flutter tasks |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-39 · Sprint 6 |
 | Affects | P5-O8 · MB-P55 |
-| Decision | ______ |
+| Decision | Closed (2026-10-31): Option 1. `new_status` is `STARTED` or `DONE` for terminal components too; P-55 labels them In progress and Executed. Full text in CT-07 v1.0. |
 
 <div dir="rtl">
 
@@ -1123,10 +1124,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | Flutter R1 |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-40 · Sprint 6 |
 | Affects | P5-O3 · MB-P55 · MB-P19 · CT-07 |
-| Decision | ______ |
+| Decision | Closed (2026-10-31): Option 1. `type = "ACKNOWLEDGE"` and `payload = { notification_id }`. A repeat is recognised from the notification state and returns `DUPLICATE`; no new column. Full text in CT-07 v1.0. |
 
 <div dir="rtl">
 
@@ -1226,10 +1227,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | FE-OQ-31 |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-44 · Sprint 6 |
 | Affects | P5-O5 · FE-065 |
-| Decision | ______ |
+| Decision | Closed (2026-10-31): Option 1. The flag is shown with no review note for the MVP. |
 
 <div dir="rtl">
 
@@ -1521,3 +1522,29 @@ This file lists every decision that must be closed before implementation, every 
 </div>
 
 **Topic.** The full API status set, one error catalogue file, and one version token.
+
+### DEC-58 · Field task details from the CT-07 Mobile review
+
+| | |
+| --- | --- |
+| Source | CT-07 review on PortHub PR #27 |
+| Owner | Backend Team |
+| Status | Closed |
+| Closing task | — |
+| Affects | P1-C5 · P5-N3 · P5-O1 · P5-O3 · MB-P19 · MB-P54 · MB-P55 · CT-04 · CT-07 |
+| Decision | Closed (2026-10-31): (1) Acknowledging any notification of a re-sent task marks all its `SENT` rows `ACKNOWLEDGED`. (2) `notification_logs.status` stays `SENT` · `FAILED` · `ACKNOWLEDGED`; the `ESCALATED` value in the CT-21 example is corrected there. (3) Tasks carry a server-set `system_label` for the P-55 labels (CT-07). (4) `GET /api/v1/system/info` is the connectivity check, with no `GET /system/ping` (CT-04 v1.1). |
+
+<div dir="rtl">
+
+**القصة.** الـ Mobile راجع CT-07 ولقى حاجات مش متحددة: الإشعار بيتبعت أكتر من مرة، فالتأكيد يسري على مين؟ والشاشة بتعرض labels ملهاش مصدر، والـ UML بيعتمد على ping مش موجود في أي عقد.
+
+</div>
+
+**Topic.** The review found gaps between CT-07, CT-21, the P-55 screen and the UML.
+
+**Options:**
+
+1. For the labels: the app works them out from its cache, with a `reason` on `removed`.
+2. For the labels: the server sends `system_label`.
+
+**Recommendation.** The Backend recommended Option 1 to save time. The lead chose Option 2, so every client gets the same answer.

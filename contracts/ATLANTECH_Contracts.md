@@ -154,25 +154,56 @@ The sign-in identifier is `username` (DEC-35, closed); users have no email.
 | Between | Backend → Mobile |
 | Owner | Backend Team |
 | Reviewers | Mobile Team |
-| Output | Mobile auth section of `port-api.yaml` |
+| Status | Approved v1.1 · 2026-10-31 by Marwan (Backend lead); v1.1 agreed with the Mobile Team (DEC-58) |
+| Output | This section. The paths go into `port-api.yaml` when P1-C3 and P1-C5 build them (CT-02) |
+
+**System info.** `GET /api/v1/system/info` needs no sign-in and is never refused with 426, because the app reads `min_app_version` from it. The app also uses it as the connectivity check at the start of a sync cycle (FR-MB-03), so there is no `GET /system/ping` (DEC-58).
 
 ```json
-// GET /api/v1/system/info
-{ "port_id": "EGDAM", "port_name": "Damietta Port", "min_app_version": "1.0.0" }
+// 200
+{
+  "port_id": "0d9f6a52-7c1b-4b7e-9a3e-5a2f1c8d7e10",
+  "port_code": "EGDAM",
+  "port_name": "Damietta Port",
+  "license_mode": "FULL",
+  "token_warning_days_left": null,
+  "min_app_version": "1.0.0"
+}
+```
 
-// POST /api/v1/auth/mobile/login
-{ "username": "pilot.k", "password": "••••••••", "device_id": "a1b2c3", "platform": "android", "app_version": "1.0.0" }
+- `port_id` is `port_profiles.public_id`. `port_code` may be null.
+- Until the licence work (DEC-54), `license_mode` is always `FULL` and `token_warning_days_left` is always `null`.
+
+**Sign-in.** `POST /api/v1/auth/mobile/login` sends the CT-01 headers `X-App-Version` and `X-Device-Id`. It takes no `Idempotency-Key`, so a token is never replayed (CT-01 section 4).
+
+```json
+// Request
+{ "username": "pilot.k", "password": "••••••••", "platform": "ANDROID" }
 
 // 200
 {
   "token": "<opaque>",
-  "expires_at": "2026-12-02T10:00:00Z",
-  "user": { "id": 77, "name": "Marine Pilot", "role": "MARINE_PILOT", "must_change_password": true }
+  "expires_at": "2026-12-02T10:00:00.000000Z",
+  "user": { "id": 77, "name": "Marine Pilot", "role": "MARINE_PILOT", "terminal_ids": [], "must_change_password": true }
 }
 
 // 426
-{ "status": 426, "code": "APP_UPDATE_REQUIRED", "min_app_version": "1.1.0" }
+{
+  "type": "https://atlantech.io/errors/app-update-required",
+  "title": "App update required",
+  "status": 426,
+  "code": "APP_UPDATE_REQUIRED",
+  "message_key": "errors.app_update_required",
+  "detail": "This version of the app is no longer supported. Update the app to continue.",
+  "min_app_version": "1.1.0"
+}
 ```
+
+- `platform` is `ANDROID` or `IOS`.
+- Refusals: 401 `UNAUTHENTICATED` · 403 `ACCOUNT_DISABLED` · 422 `VALIDATION_FAILED`, also for a missing device header · 426 · 429 `TOO_MANY_ATTEMPTS`. 426 is checked before the password, and gives no token (FR-AC-05).
+- **Token:** opaque, stored by Sanctum in `personal_access_tokens` and tied to one `user_devices` row. Each use extends it to 30 days from that use (FR-AC-06), and `expires_at` is the value at sign-in. P1-C3 adds the table to CT-17.
+- **Forced password change:** the CT-03 rules and `POST /api/v1/auth/change-password` apply, with the Bearer token.
+- **Logout:** `POST /api/v1/auth/logout` with the Bearer token returns 204 and sets `revoked_at` (FR-AC-08). A revoked token gets 401.
 
 ---
 
@@ -183,22 +214,12 @@ The sign-in identifier is `username` (DEC-35, closed); users have no email.
 | Between | Backend → Frontend |
 | Owner | Backend Team |
 | Reviewers | Frontend Team |
+| Status | Approved v1.0 · 2026-10-31 by Marwan (Backend lead), without team review |
 | Output | `contracts/realtime-sse.md`: the event list and the shape of each event |
 
-`GET /api/v1/events` (`text/event-stream`):
+**Full text:** [`realtime-sse.md`](realtime-sse.md), which wins over this summary.
 
-- Events are filtered by role and terminal.
-- After a dropped connection, `Last-Event-ID` replays the missed events.
-- An event only says that something changed; the Frontend fetches the details over REST.
-
-**Events:**
-`REQUEST_STATUS_CHANGED` · `BAPLIE_PARSED` · `ENTRY_WINDOW_READY` · `RECOMMENDATION_READY` · `PLAN_CONFIRMED` · `PLAN_CANCELLED` · `ASSIGNMENT_CHANGED` · `NOTIFICATION_CREATED` · `NOTIFICATION_ACKNOWLEDGED` · `DEVIATION_DETECTED` · `REPLAN_PROPOSED` · `YARD_RECOMMENDATION_READY` · `YARD_RECOMMENDATION_FAILED` · `DRIFT_ALERT` · `RUN_FAILED`
-
-```
-id: 9f2c-0001
-event: RECOMMENDATION_READY
-data: {"entity":"berthing_request","id":1550,"recommendation_id":880,"status":"RECOMMENDATION_GENERATED","at":"2026-11-02T10:02:14Z"}
-```
+`GET /api/v1/events` (`text/event-stream`) is filtered by role and terminal. `Last-Event-ID` replays events up to 1 hour old; anything older gets `RESYNC`. An event only says that something changed.
 
 ---
 
@@ -209,16 +230,12 @@ data: {"entity":"berthing_request","id":1550,"recommendation_id":880,"status":"R
 | Between | Backend → Mobile |
 | Owner | Backend Team |
 | Reviewers | Mobile Team |
+| Status | Approved v1.0 · 2026-10-31 by Marwan (Backend lead), without team review |
 | Output | `contracts/realtime-mobile.md` |
 
-- **Channel:** `private-user.{user_id}`.
-- **Event:** carries only the `event_id` and its type; the app fetches the details over REST.
-- **Duplicates:** the app ignores any `event_id` it has already seen.
-- **After every reconnect:** the app calls `GET /sync/changes`.
+**Full text:** [`realtime-mobile.md`](realtime-mobile.md), which wins over this summary.
 
-```json
-{ "event_id": "e-77-000231", "type": "TASK_UPDATED", "entity": "plan_component", "entity_id": 5012 }
-```
+One private channel per user, `private-user.{user_id}`, with two types: `TASK_UPDATED` and `NOTIFICATION_CREATED`. The app fetches content with `GET /api/v1/sync/changes`, ignores repeated `event_id` values and fetches after every reconnect.
 
 ---
 
@@ -229,43 +246,12 @@ data: {"entity":"berthing_request","id":1550,"recommendation_id":880,"status":"R
 | Between | Mobile ↔ Backend |
 | Owner | Backend Team (endpoints) · Mobile Team (event shape) |
 | Reviewers | Mobile Team · Backend Team |
-| Output | Sync section of `port-api.yaml` + `contracts/sync-events.md` |
+| Status | Approved v1.1 · 2026-10-31 by Marwan (Backend lead) and Farouk (Mobile Team), on PortHub PR #27 |
+| Output | `contracts/sync-events.md`. The paths go into `port-api.yaml` when P5-O1 and P5-O2 build them (CT-02) |
 
-**Event types:**
+**Full text:** [`sync-events.md`](sync-events.md), which wins over this summary.
 
-| Type | Payload | Note |
-| --- | --- | --- |
-| `STATUS_UPDATE` | `{ plan_component_id, new_status }` | In progress / Executed only (DEC-39) |
-| `ACKNOWLEDGE` | `{ notification_id }` | DEC-40 |
-
-```json
-// POST /api/v1/sync/events
-{
-  "events": [
-    {
-      "client_event_id": "2c1f6a7e-1d0b-4c11-9a51-7f1e2b3c4d5e",
-      "type": "STATUS_UPDATE",
-      "payload": { "plan_component_id": 5012, "new_status": "STARTED" },
-      "recorded_at": "2026-11-02T11:40:00Z",
-      "client_sent_at": "2026-11-02T11:52:10Z",
-      "sync_source": "TABLET"
-    }
-  ]
-}
-
-// 200: one result per event, in the same order
-{
-  "results": [
-    { "client_event_id": "2c1f6a7e-…", "result": "APPLIED" },
-    { "client_event_id": "8d9e…", "result": "REJECTED", "reason_code": "PLAN_CANCELLED" }
-  ]
-}
-
-// GET /api/v1/sync/changes?since=tok_118
-{ "tasks": [ ], "notifications": [ ], "removed": [ { "entity": "plan_component", "id": 5003 } ], "sync_token": "tok_131" }
-```
-
-`result` values: `APPLIED` · `DUPLICATE` · `REJECTED`.
+`POST /api/v1/sync/events` takes up to 100 events: `STATUS_UPDATE` (`STARTED` · `DONE`, DEC-39) and `ACKNOWLEDGE` (DEC-40). Each gets `APPLIED`, `DUPLICATE` or `REJECTED` with a `reason_code`. `GET /api/v1/sync/changes` returns `tasks`, `notifications`, `removed` and `sync_token`.
 
 ---
 
@@ -1265,18 +1251,13 @@ Workers treat an unknown ENUM value they read as a warning and skip the row; the
 | --- | --- |
 | Between | Backend → Frontend · Mobile · QA |
 | Owner | Backend Team |
-| Reviewers | Frontend Team · QA Team |
+| Reviewers | Frontend Team · Mobile Team, critical changes only. QA tests and does not review |
+| Status | Approved v1.0 · 2026-10-31 by Marwan (Backend lead), without team review |
 | Output | `contracts/mock-workers.md`: for each queue, the results it returns and how to choose a scenario |
 
-- Mocks write contract-shaped rows and send C-06, so the Frontend cannot tell them apart from the real workers.
-- The scenario is selected with the `mock_scenario` key in `port_settings`, or with a tag in the vessel name.
+**Full text:** [`mock-workers.md`](mock-workers.md), which wins over this summary.
 
-| Queue | Scenarios |
-| --- | --- |
-| `queue:part1` | `WINDOWS_FOUND` · `NO_FEASIBLE_WINDOW` · `ENV_DATA_UNAVAILABLE` · `FAILED` |
-| `queue:part2` | `SOLVED` · `FIFO_FALLBACK` · `NO_FEASIBLE_PLAN` · `GENERATION_FAILED` |
-| `queue:edi` | `PARSED` · `QUARANTINED` · `FAILED` |
-| yard | `YARD_REC_GENERATED` · `GENERATION_FAILED` |
+Mocks write contract-shaped rows and send C-06. A vessel-name tag wins over the `mock_scenario` key in `port_settings`, which wins over the default. They run outside `production` only.
 
 ---
 
@@ -1287,34 +1268,93 @@ Workers treat an unknown ENUM value they read as a warning and skip the row; the
 | Between | Backend → Frontend |
 | Owner | Backend Team |
 | Reviewers | Frontend Team |
-| Output | AI results section of `port-api.yaml` |
+| Status | Approved v1.0 · 2026-10-31 by Marwan (Backend lead), without team review |
+| Output | This section. The paths go into `port-api.yaml` as each endpoint is built (CT-02) |
 
 | Endpoint | Returns | Role |
 | --- | --- | --- |
-| `GET /api/v1/berthing-requests/{id}/part1-result` | Outcome, windows, blocked periods, data sources and their age | Port Authority Staff |
-| `GET /api/v1/berthing-requests/{id}/recommendation` | Current version, options, tugs, rationale and binding constraints | Port Authority Staff |
-| `GET /api/v1/terminal-recommendations/{id}` | Yard placements, rationale and confidence | CT Operation Planner (own terminal) |
-| `GET /api/v1/environment/conditions` | Weather, tide, surge, source and data age | All office users |
-| `GET /api/v1/ai/evaluation` · `GET /api/v1/ai/drift` | Metrics and drift | Port Admin |
+| `GET /api/v1/berthing-requests/{id}/part1-result` | Outcome, windows, blocked periods, data sources and their age | `PORT_STAFF` |
+| `GET /api/v1/berthing-requests/{id}/recommendation` | Current version, options, tugs, rationale and binding constraints | `PORT_STAFF` |
+| `GET /api/v1/terminal-recommendations/{id}` | Yard placements, rationale and confidence | `TERMINAL_OFFICER`, own terminal |
+| `GET /api/v1/environment/conditions` | Weather, tide, source and data age | Every role except `MARINE_PILOT`, `TUG_MASTER` and `TERMINAL_SUPERVISOR` |
+| `GET /api/v1/ai/evaluation` · `GET /api/v1/ai/drift` | Metrics and drift | `PORT_GM` |
+
+**Common rules:**
+
+- 404 `NOT_FOUND` when no run exists yet for the request. A run in progress returns 200 with its status and empty results.
+- `version` is the CT-01 version token. `version_no` is the recommendation's number within its request (1, 2, 3 …), computed by the Backend. Do not send it back.
+- `rationale` is the text rendered from `rationale_templates`.
+- Open AI decisions do not change these shapes. `delay_risk` may be null (DEC-21). `proposal` may be null on `NO_FEASIBLE_WINDOW` (DEC-07). `source` is free text (DEC-26). Options have no `confidence` field, which is the Backend position on DEC-43. Adding a field later is a minor version.
+- Surge is not stored: the schema keeps raw provider values, and derived values stay on the AI side. `sea_level` is the raw value.
 
 ```json
+// GET /api/v1/berthing-requests/1550/part1-result
+{
+  "run": { "id": 301, "status": "DONE", "outcome": "WINDOWS_FOUND", "finished_at": "2026-11-02T10:02:14.000000Z" },
+  "proposal": { "id": 455, "version": "2026-11-02T10:02:14.123456Z", "status": "PROPOSED", "peak_congestion_score": 0.410 },
+  "windows": [ { "id": 77, "window_start": "2026-11-03T04:00:00.000000Z", "window_end": "2026-11-03T09:00:00.000000Z", "confidence": 0.870 } ],
+  "blocked_periods": [ { "period_start": "2026-11-03T09:00:00.000000Z", "period_end": "2026-11-03T13:00:00.000000Z", "limiting_constraint": { "id": 6, "code": "MAX_WIND" } } ],
+  "data_sources": [ { "kind": "FORECAST", "source": "Open-Meteo", "provider_rank": "PRIMARY", "pulled_at": "2026-11-02T10:00:00.000000Z", "data_stale": false } ]
+}
+
 // GET /api/v1/berthing-requests/1550/recommendation
 {
+  "run": { "id": 612, "status": "OPTIMAL", "outcome": "SOLVED" },
   "recommendation_id": 880,
-  "version": 2,
+  "version": "2026-11-02T10:02:14.123456Z",
+  "version_no": 2,
   "status": "PENDING_REVIEW",
   "source": "AI",
   "purpose": "INITIAL",
+  "binding_constraints": [],
   "options": [
     {
       "id": 9031, "rank": 1, "berth": { "id": 12, "code": "B12" },
-      "start": "2026-11-03T06:00:00Z", "end": "2026-11-03T18:30:00Z",
+      "planned_start": "2026-11-03T06:00:00.000000Z", "planned_end": "2026-11-03T18:30:00.000000Z",
       "pilot": { "id": 4 }, "tugs": [ { "id": 7 }, { "id": 9 } ],
-      "service_time_hours": 12.5, "delay_risk": null,
-      "objective_score": 0.82, "rationale": "Lowest waiting time for MSC Aurora at berth B12."
+      "service_time_method": "FORMULA", "service_time_p50_hours": 12.50, "service_time_p90_hours": null, "delay_risk": null,
+      "objective_score": 0.8200, "rationale": "Lowest waiting time for MSC Aurora at berth B12."
     }
   ]
 }
+```
+
+With `NO_FEASIBLE_PLAN`, `recommendation_id`, `version`, `version_no`, `status`, `source` and `purpose` are null, `options` is empty and `binding_constraints` holds the CT-10 reasons.
+
+```json
+// GET /api/v1/terminal-recommendations/640
+{
+  "id": 640,
+  "version": "2026-11-02T12:00:00.123456Z",
+  "berthing_request_id": 1550,
+  "terminal_id": 3,
+  "lifecycle_status": "YARD_REC_GENERATED",
+  "decision": "PENDING",
+  "confidence": 0.920,
+  "rationale": "Most containers are in their preferred zones.",
+  "failure_reason": null,
+  "placements": [ { "id": 1, "manifest_entry_id": 8123, "yard_block": { "id": 21, "code": "A1" }, "yard_slot_id": null } ]
+}
+
+// GET /api/v1/environment/conditions
+{
+  "forecast": {
+    "source": "Open-Meteo", "provider_rank": "PRIMARY", "pulled_at": "2026-11-02T10:00:00.000000Z", "data_stale": false,
+    "units": { "wind_speed": "KNOTS", "current_speed": "KNOTS", "visibility": "NAUTICAL_MILES" },
+    "points": [ { "valid_at": "2026-11-02T11:00:00.000000Z", "wind_speed": 12.40, "wind_gust": 18.00, "wind_direction_deg": 310.0, "visibility": 6.00, "wave_height": 1.10, "wave_period": 6.5, "wave_direction_deg": 300.0, "current_speed": 0.80, "sea_level": 0.420 } ]
+  },
+  "tide": { "computed_at": "2026-11-02T00:00:00.000000Z", "points": [ { "valid_at": "2026-11-02T11:00:00.000000Z", "height": 0.380 } ] }
+}
+```
+
+`GET /api/v1/ai/evaluation` and `GET /api/v1/ai/drift` are CT-01 lists, newest first:
+
+```json
+// GET /api/v1/ai/evaluation
+{ "data": [ { "id": 5, "model_version_id": 2, "metric_name": "MAE", "dataset_type": "ROLLING", "metric_value": 1.24500, "period_start": "2026-10-01T00:00:00.000000Z", "period_end": "2026-10-31T00:00:00.000000Z", "computed_at": "2026-11-01T02:00:00.000000Z" } ], "meta": { "page": 1, "per_page": 25, "total": 1 } }
+
+// GET /api/v1/ai/drift
+{ "data": [ { "id": 41, "model_version_id": 2, "metric_type": "PSI", "feature_name": "wind_speed", "metric_value": 0.31000, "threshold": 0.25000, "is_drifted": true, "measured_at": "2026-11-01T02:00:00.000000Z" } ], "meta": { "page": 1, "per_page": 25, "total": 1 } }
 ```
 
 ---
