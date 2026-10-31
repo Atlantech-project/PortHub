@@ -68,6 +68,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-55 | TIMING and NCT recommendation producers | Leads Council | Closed | — |
 | DEC-56 | SaaS API location and licence signing key | Leads Council | Closed | — |
 | DEC-57 | Port API status codes, error catalogue and version token | Backend Team | Closed | — |
+| DEC-58 | Field task details from the CT-07 Mobile review | Backend Team | Closed | — |
 
 ## Backend–AI integration decisions
 
@@ -1521,3 +1522,29 @@ This file lists every decision that must be closed before implementation, every 
 </div>
 
 **Topic.** The full API status set, one error catalogue file, and one version token.
+
+### DEC-58 · Field task details from the CT-07 Mobile review
+
+| | |
+| --- | --- |
+| Source | CT-07 review on PortHub PR #27 |
+| Owner | Backend Team |
+| Status | Closed |
+| Closing task | — |
+| Affects | P1-C5 · P5-N3 · P5-O1 · P5-O3 · MB-P19 · MB-P54 · MB-P55 · CT-04 · CT-07 |
+| Decision | Closed (2026-10-31): (1) Acknowledging any notification of a re-sent task marks all its `SENT` rows `ACKNOWLEDGED`. (2) `notification_logs.status` stays `SENT` · `FAILED` · `ACKNOWLEDGED`; the `ESCALATED` value in the CT-21 example is corrected there. (3) Tasks carry a server-set `system_label` for the P-55 labels (CT-07). (4) `GET /api/v1/system/info` is the connectivity check, with no `GET /system/ping` (CT-04 v1.1). |
+
+<div dir="rtl">
+
+**القصة.** الـ Mobile راجع CT-07 ولقى حاجات مش متحددة: الإشعار بيتبعت أكتر من مرة، فالتأكيد يسري على مين؟ والشاشة بتعرض labels ملهاش مصدر، والـ UML بيعتمد على ping مش موجود في أي عقد.
+
+</div>
+
+**Topic.** The review found gaps between CT-07, CT-21, the P-55 screen and the UML.
+
+**Options:**
+
+1. For the labels: the app works them out from its cache, with a `reason` on `removed`.
+2. For the labels: the server sends `system_label`.
+
+**Recommendation.** The Backend recommended Option 1 to save time. The lead chose Option 2, so every client gets the same answer.

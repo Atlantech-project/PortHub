@@ -154,10 +154,10 @@ The sign-in identifier is `username` (DEC-35, closed); users have no email.
 | Between | Backend → Mobile |
 | Owner | Backend Team |
 | Reviewers | Mobile Team |
-| Status | Approved v1.0 · 2026-10-31 by Marwan (Backend lead), without team review |
+| Status | Approved v1.1 · 2026-10-31 by Marwan (Backend lead); v1.1 agreed with the Mobile Team (DEC-58) |
 | Output | This section. The paths go into `port-api.yaml` when P1-C3 and P1-C5 build them (CT-02) |
 
-**System info.** `GET /api/v1/system/info` needs no sign-in and is never refused with 426, because the app reads `min_app_version` from it.
+**System info.** `GET /api/v1/system/info` needs no sign-in and is never refused with 426, because the app reads `min_app_version` from it. The app also uses it as the connectivity check at the start of a sync cycle (FR-MB-03), so there is no `GET /system/ping` (DEC-58).
 
 ```json
 // 200
