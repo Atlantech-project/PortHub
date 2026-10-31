@@ -114,6 +114,7 @@ components:
 | Between | Backend → Frontend |
 | Owner | Backend Team |
 | Reviewers | Frontend Team |
+| Status | Approved v1.0 · 2026-10-31 by Marwan (Backend lead), without team review |
 | Output | Auth section of `port-api.yaml` + the flow steps in `contracts/auth-web.md` |
 
 **Flow:**

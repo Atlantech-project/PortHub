@@ -1,6 +1,6 @@
 # ATLANTECH contracts
 
-This folder is the single source of truth for what the ATLANTECH teams (Backend, Frontend, Mobile, AI, QA) promise each other. If a contract here and a team's code or notes disagree, the contract wins until it is changed through the rule below.
+This folder is the single source of truth for what the ATLANTECH teams (Backend, Frontend, Mobile, AI, QA) promise each other. If a contract here and a team's code or notes disagree, the contract wins until it is changed through the rule below. The exception is CT-01 and CT-02: when the code on `develop` differs, the contract is corrected to match (see below).
 
 ## Files
 

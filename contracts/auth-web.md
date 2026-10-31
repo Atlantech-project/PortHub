@@ -3,6 +3,8 @@
 | | |
 | --- | --- |
 | Version | v1.0 |
+| Status | Approved |
+| Approved by | Marwan (Backend lead), 2026-10-31, without team review |
 | Owner | Backend Team |
 | Reviewers | Frontend Team |
 | Endpoints | Auth section of [`openapi/port-api.yaml`](openapi/port-api.yaml) |
