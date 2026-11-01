@@ -1,0 +1,6 @@
+berth_code,terminal_code,length_m,depth_m,max_loa_m,max_draft_m,source,is_synthetic
+B01,T1,250.0,12.0,235.0,11.2,"Minimum scale baseline topology fixture",true
+B02,T1,280.0,13.0,265.0,12.1,"Minimum scale baseline topology fixture",true
+B03,T1,300.0,13.5,285.0,12.6,"Minimum scale baseline topology fixture",true
+B04,T1,320.0,14.0,305.0,13.1,"Minimum scale baseline topology fixture",true
+B05,T1,350.0,14.5,335.0,13.6,"Minimum scale baseline topology fixture",true
