@@ -263,7 +263,7 @@ One private channel per user, `private-user.{user_id}`, with two types: `TASK_UP
 | Owner | AI Team (JSON Schema) · Backend Team (sending with RPUSH) |
 | Reviewers | Backend Team · AI Team |
 | Output | `contracts/ai/envelope.schema.json` |
-| Status | Approved v1.0 · 2026-10-30 on Backend Team sign-off (DEC-04). Consolidates the envelope rules already approved in CT-09 to CT-14 and CT-16 |
+| Status | Approved v1.0 · 2026-10-31 · AI lead MennaGamal-87, Backend lead Marwan. Consolidates the envelope rules already approved in CT-09 to CT-14 and CT-16 |
 
 The envelope is the outer JSON message for every job the Backend sends to an AI worker. Each job type's payload has its own schema (C-01 to C-05); this contract covers everything around it. The completion message going the other way is C-06 (CT-14).
 
@@ -437,6 +437,7 @@ All seven fields are required; no other field is allowed (`additionalProperties:
 | Reviewers | AI Team |
 | Output | `contracts/ai/c02-part2-solve.schema.json` (payload only) |
 | Status | Approved v1.1 · 2026-10-27 (plural table names, CT-17) · v1.0 2026-10-26 (DEC-15) |
+| Proposed change | 2026-11-03 · AI-003 · CT-10 v1.1 → v1.2 (minor): state that `berthing_request_ids` has unique items within one entry, matching `uniqueItems: true` in `c02-part2-solve.schema.json` · Reason: `contract-v1-record.md` item 3 added this to the schema as in line with "One entry per request", but that rule only says a request id appears in at most one entry. Today `[5, 5]` in one entry passes the CT-10 text and fails the schema, so the job ends as `INVALID_ENVELOPE` · Evidence: `contracts/ai/c02-part2-solve.schema.json`, `contracts/ai/contract-v1-record.md` item 3, CT-10 "One entry per request" · Impact: Backend sending and the `queue:part2` worker; messages that already pass the schema don't change · Awaiting: Backend Team (Owner), AI Team (Reviewer) |
 
 The schema describes the **payload only**. `envelope.schema.json` (CT-08) references it with `if job_type = PART2_SOLVE then payload: { $ref: c02-part2-solve.schema.json }`. C-01, C-03 and C-04 follow the same pattern.
 
