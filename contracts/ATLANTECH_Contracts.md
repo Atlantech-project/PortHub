@@ -1161,7 +1161,7 @@ Workers treat an unknown ENUM value they read as a warning and skip the row; the
 | Owner | AI Team (`seed-spec.json`) · Backend Team (`reference-seed.json`, seeders) |
 | Reviewers | Backend Team · AI Team (codes it depends on) |
 | Output | `contracts/ai/seed-spec.json` · `contracts/db/reference-seed.json` |
-| Status | Approved v1.0 · 2026-10-27 (DEC-12 · DEC-23). Values marked ⟨AI⟩ arrive with the `seed-spec.json` PR |
+| Status | Proposed v1.1 (DEC-59), waiting for AI Team approval · Approved v1.0 · 2026-10-27 (DEC-12 · DEC-23). Values marked ⟨AI⟩ arrive with the `seed-spec.json` PR |
 
 **1. Scope.**
 
@@ -1192,7 +1192,7 @@ Workers treat an unknown ENUM value they read as a warning and skip the row; the
     { "model_key": "M2_SERVICE_TIME", "algorithm_family": "GRADIENT_BOOSTING", "description": "Berth service time (P50 / P90)" }
   ],
   "ml_model_versions": [
-    { "model_key": "M2_SERVICE_TIME", "version_no": 1, "status": "CHAMPION", "artifact_path": "models/m2_service_time/v1.joblib", "trained_at": "2026-11-01T00:00:00Z", "hyperparameters": {} }
+    { "model_key": "M2_SERVICE_TIME", "version_no": 1, "status": "CHAMPION", "artifact_path": "models/m2_service_time/v1.joblib", "trained_at": "2026-11-01T00:00:00Z", "deployed_at": "2026-11-01T00:00:00Z", "hyperparameters": {} }
   ],
   "port_settings": [
     { "setting_key": "solver_time_limit_seconds", "value_type": "INT", "value": "10", "min": 1, "max": 120, "description": "CP-SAT time limit per solve" }
@@ -1200,7 +1200,9 @@ Workers treat an unknown ENUM value they read as a warning and skip the row; the
 }
 ```
 
-- `min` / `max` are optional and omitted for `STRING`, `JSON` and `BOOL`.
+- `min` / `max` are optional and omitted for `STRING`, `JSON` and `BOOL`. They are stored in `port_settings.min_value` and `max_value` (added by P1-B6).
+- A `CHAMPION` row must carry `deployed_at` (schema check).
+- `reference-seed.json` uses the same format, with its rows in [`db/reference-seed.json`](db/reference-seed.json). Its Backend keys are `reminder_lead_minutes` and `min_app_version`. The delay threshold keys are added when DEC-30 gives the numbers (DEC-09).
 - `ml_model_versions` is seeded because `solver_run_model_versions` needs an existing version and `w_part3` cannot insert versions in the MVP (DEC-08). A model with no CHAMPION at go-live has no row; the worker uses the CT-10 fallback.
 
 **3. Seeding rules (Backend).**
