@@ -614,6 +614,7 @@ This file lists every decision that must be closed before implementation, every 
 | Closing task | DEC-20 · Sprint 2 |
 | Affects | AI-054 · AI-055 |
 | Decision | ______ |
+| Proposed change | 2026-11-03 · AI-054 · Close DEC-20 on the updated recommendation below: a provisional hybrid, PROPOSED · Reason: Sprint 2 needs a rule and no formula has arrived from the Tug Manager or Marine Safety Officer · Evidence: `project-ai` `part2/tugs.py`, `part2/tug_rules.json`, `tests/unit/part2/test_tugs.py` · Impact: AI-054, AI-055, CT-13 (`TUG_COUNT`); Backend for `pilot_requested` and a tug-count override · AI lead approval: Menna Gamal (AI lead, @MennaGamal-87), 2026-11-03, pending Leads Council · Awaiting: Leads Council, including the Backend Team |
 
 <div dir="rtl">
 
@@ -629,6 +630,73 @@ This file lists every decision that must be closed before implementation, every 
 2. A provisional table by vessel length until the input arrives.
 
 **Recommendation.** Request the formula formally in Sprint 1. If it does not arrive, the provisional table is marked "unvalidated" in the rationale and can be replaced without code changes (pluggable rule).
+
+**Updated recommendation (2026-11-03, provisional, PROPOSED).** Option 2, extended to a hybrid. Tug requirements are computed before the solver, one result per berthing request, and passed to CP-SAT as integers: a provisional table by LOA, with a mass-based bollard pull for tankers and bulk carriers. The rules are from literature and unvalidated by the Tug Manager or Marine Safety Officer, and they can be replaced without code changes. Values are in `project-ai` `part2/tug_rules.json`, and code in `part2/tugs.py`.
+
+**Options considered:**
+
+| Option | Result |
+| --- | --- |
+| Fixed table by length only | Rejected: ignores vessel mass for heavy, slow ships |
+| Hybrid: table by LOA, plus mass-based bollard pull for tankers and bulk carriers | **Recommended** |
+| Physics only | Rejected: needs windage and environmental data not available in v1 |
+| Free solver choice | Rejected: the solver could choose too few tugs |
+
+**Calculation (per berthing request):**
+
+1. **Compulsory towage.** If `gross_tonnage` is below `T_COMPULSORY` and `pilot_requested` is `False`: `N_min` = `N_cap` = `BP_req` = 0. `T_COMPULSORY` = 1000, interim and conservative. If `pilot_requested` is unknown, the table applies, with flag `pilot_request_unknown`.
+2. **Displacement.** Δ = LOA × beam × draught × Cb × 1.025 (tonnes).
+   - **Draught:** `berthing_requests.arrival_draft`; if missing, `vessels.max_draft` with flag `max_draft_used`.
+   - **Cb:** `berthing_requests.block_coefficient`; if missing or outside [0.50, 0.90], bulk carrier 0.80, tanker 0.80, container 0.65, other 0.85, with flag `cb_fallback_used`.
+   - **LOA instead of LBP** slightly overestimates Δ, accepted as conservative. GT and NT are never used as a weight: they measure volume.
+3. **Mass-based bollard pull, `TANKER` and `BULK_CARRIER` only.** BP_mass = 60 × Δ / 100,000 + 40 (tonnes).
+4. **Table: MPA's column for vessels with power.** Upper LOA limits are inclusive, so a decimal LOA between bands takes the higher band. `BP_floor` is N_base × the minimum, derived here; MPA doesn't state it.
+
+   | LOA (m) | N_base | Min BP per tug (t) | BP_floor (t) |
+   | --- | --- | --- | --- |
+   | ≤ 60 | 1 | 10 | 10 |
+   | ≤ 122 | 2 | 10 | 20 |
+   | ≤ 200 | 2 | 17 | 34 |
+   | ≤ 280 | 2 | 25 | 50 |
+   | > 280 or GT ≥ 75,000, draught < 17 m | 4 | 25 | 100 |
+   | > 280 or GT ≥ 75,000, draught ≥ 17 m | 4 | 45 | 180 |
+
+5. **Final values.** `BP_req` = ceil(max(BP_mass if it applies, BP_floor)). `N_min` = N_base. `N_cap` = `N_min` + 1. `eligible_tugs`: tugs whose `tug_power` is in bollard pull and at least the minimum per tug. This is by rating only: availability is AI-055's job (DEC-32). A tug rated in `HP` or `KW` is excluded with flag `tug_power_not_bollard_pull`; no conversion is agreed.
+6. **Pilot override.** An optional `pilot_override` replaces `N_min`, `BP_req` or both, with flag `pilot_override`.
+
+Every result carries flag `rules_unvalidated` until the rules are approved as validated. **Worked example:** bulk carrier, LOA 225 m, beam 32 m, draught 13 m, Cb 0.80: Δ = 76,752 t, BP_mass = 86.05 t, `BP_req` = 87, `N_min` = 2, `N_cap` = 3.
+
+**Thrusters:** credit for bow or stern thrusters is out of scope for v1. The berthing request has no thruster data, so results are conservative.
+
+**CP-SAT interface (AI-055).** For each request r and tug t, with x[r,t] ∈ {0,1}:
+- Σ x[r,t] over eligible tugs ≥ `N_min`
+- Σ x[r,t] over eligible tugs ≤ `N_cap`
+- Σ BP(t) · x[r,t] over eligible tugs ≥ `BP_req`
+- x[r,t] = 0 for a tug that isn't eligible
+
+If infeasible, the request is reported as infeasible; the requirement is never silently relaxed.
+
+**Data requirements:** `vessels.loa`, `vessels.beam`, `vessels.max_draft`, `vessel_types.code`, `berthing_requests.arrival_draft`, `gross_tonnage`, `block_coefficient`, `tugboats.tug_power`, `tugboats.tug_power_unit`. Missing from the schema: `pilot_requested` and a tug-count `pilot_override`. A missing or non-positive LOA, beam, GT or draught raises an error.
+
+**Deviation from AI-012:** the values are in `part2/tug_rules.json`, not `port_settings`, whose `setting_value` is `varchar(255)` and can't hold the table or its sources. A change needs a deploy, not a code change.
+
+**Open items:**
+
+1. Confirm `T_COMPULSORY` (1000 or 2000) with the Alexandria Port Authority.
+2. Replace the interim MPA table with the Alexandria Port Authority's own table.
+3. Vessels without power: MPA has a separate, higher column, which isn't used. No field says which applies.
+4. Tug Manager: decide whether `LNG_CARRIER` should use the mass-based formula. It's "other" for now.
+5. Tug Manager and Marine Safety Officer: validate the rules (AI-005). `DWT` isn't used.
+6. Backend: add `pilot_requested` to the request, and a place for a tug-count override.
+7. Tug Manager: enter fleet power in bollard pull, or agree a conversion.
+8. Confirm the form's draught is the arrival draught. The schema holds it as `arrival_draft`.
+9. v2: wind-based bollard pull for high-windage ships: BP_wind = 1.25 × 0.5·ρ·C·A_L·V²/9810. Needs windage area and gust forecasts.
+
+**References:**
+- MPA Singapore Tug Assignment Guidelines, rev. 11 Feb 2025: https://www.mpa.gov.sg/api/media/c3d47522-816b-4197-b4f2-8bbaa3f87097/tug_assignment_guidelines.pdf. Checked on 2026-11-03: the column for vessels with power matches the table.
+- Formula: https://www.seanews.com.tr/authors/cahit-istikbal/what-is-bollard-pull-and-how-to-calculate-it/162591/. Checked on 2026-11-03: confirms the formula and the example of 10,000 t giving 46 t, as a rough minimum. It names neither Hensen nor ship types.
+- Hensen, *Tug Use in Port* (IMO MSC.1/Circ.1101): cited by the AI lead for the attribution and the limit to tankers and bulk carriers; not checked.
+- Compulsory towage, cited by the AI lead, not checked: Alexandria Port Authority, https://apa.gov.eg/en/alex-port-navigation-data/ (above 2000); Ministry of Transport, https://www.mts.gov.eg/en/port/%D9%85%D9%8A%D9%86%D8%A7%D8%A1-%D8%A7%D9%84%D8%AF%D8%AE%D9%8A%D9%84%D8%A9/ (1000 and above).
 
 ### DEC-21 · Phase 1 delay-risk rule
 
