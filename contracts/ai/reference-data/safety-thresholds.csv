@@ -1,0 +1,13 @@
+parameter,operation_type,vessel_type,threshold_value,unit,source,is_synthetic
+WIND_SPEED_MAX_KTS,BERTHING,ALL,25.0,KTS,"Damietta Port Marine Safety Regulations",false
+WIND_SPEED_MAX_KTS,UNBERTHING,ALL,28.0,KTS,"Damietta Port Marine Safety Regulations",false
+WIND_GUST_MAX_KTS,BERTHING,ALL,32.0,KTS,"Damietta Port Marine Safety Regulations",false
+WIND_GUST_MAX_KTS,UNBERTHING,ALL,35.0,KTS,"Damietta Port Marine Safety Regulations",false
+WAVE_HEIGHT_MAX_M,BERTHING,ALL,1.5,M,"Damietta Port Marine Safety Regulations",false
+WAVE_HEIGHT_MAX_M,CANAL_TRANSIT,ALL,2.0,M,"Damietta Port Marine Safety Regulations",false
+VISIBILITY_MIN_NM,BERTHING,ALL,1.0,NM,"Damietta Port Marine Safety Regulations",false
+VISIBILITY_MIN_NM,CANAL_TRANSIT,ALL,1.5,NM,"Damietta Port Marine Safety Regulations",false
+UKC_MIN_M,BERTHING,ALL,1.0,M,"DEC-30 proposed port safety baseline",true
+UKC_MIN_M,CANAL_TRANSIT,ALL,1.2,M,"DEC-30 proposed port safety baseline",true
+UKC_MIN_M,BERTHING,CONTAINER,1.0,M,"DEC-30 proposed port safety baseline",true
+UKC_MIN_M,BERTHING,TANKER,1.5,M,"DEC-30 proposed port safety baseline",true

@@ -19,7 +19,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-06 | Joint solve scope: which requests may change per trigger | AI Team | Closed | Sprint 1 |
 | DEC-07 | Storing a NO_FEASIBLE_WINDOW result | AI Team | Open | Sprint 5 |
 | DEC-08 | Database read source and worker privileges | Backend Team | Closed | Sprint 1 |
-| DEC-09 | Where deviation thresholds live | Backend Team | Open | Sprint 6 |
+| DEC-09 | Where deviation thresholds live | Backend Team | Closed | Sprint 6 |
 | DEC-10 | Scope of the AI FastAPI service | AI Team | Closed | Sprint 1 |
 | DEC-11 | Redis persistence | Backend Team | Closed | Sprint 3 |
 | DEC-12 | AI `port_settings` keys | AI Team | Closed | Sprint 1 |
@@ -69,6 +69,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-56 | SaaS API location and licence signing key | Leads Council | Closed | — |
 | DEC-57 | Port API status codes, error catalogue and version token | Backend Team | Closed | — |
 | DEC-58 | Field task details from the CT-07 Mobile review | Backend Team | Closed | — |
+| DEC-59 | `port_settings` min and max, and CHAMPION `deployed_at` | Backend Team | Open | Sprint 2 |
 
 ## Backend–AI integration decisions
 
@@ -322,10 +323,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | D-10 · OD-16 (part) · AIBD-020 |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-09 · Sprint 6 |
 | Affects | P5-O6 · P5-O7 |
-| Decision | ______ |
+| Decision | Closed (2026-10-31): Option 1. `port_settings` keys per component type. The numbers come from DEC-30, and the keys are added to `reference-seed.json` then. |
 
 <div dir="rtl">
 
@@ -1548,3 +1549,29 @@ This file lists every decision that must be closed before implementation, every 
 2. For the labels: the server sends `system_label`.
 
 **Recommendation.** The Backend recommended Option 1 to save time. The lead chose Option 2, so every client gets the same answer.
+
+### DEC-59 · `port_settings` min and max, and CHAMPION `deployed_at`
+
+| | |
+| --- | --- |
+| Source | CT-18 · `reference-seed.json` |
+| Owner | Backend Team |
+| Status | Open |
+| Closing task | DEC-59 · Sprint 2 |
+| Affects | P1-B6 · P2-F9 · P2 settings page (P-62) · AI-009 · CT-17 · CT-18 |
+| Decision | ______ |
+
+<div dir="rtl">
+
+**القصة.** CT-18 بيطلب إن الـ min والـ max يتطبقوا لما الـ setting يتحفظ، بس جدول `port_settings` مفيهوش أعمدة ليهم. وكمان مثال الـ CHAMPION كان ناقصه `deployed_at`، فالصف ماكانش هيدخل الجدول أصلًا.
+
+</div>
+
+**Topic.** CT-18 needs min and max stored and enforced, and the schema has no columns for them. The CT-18 example also breaks the `chk_mlv_champion_deployed` check.
+
+**Options:**
+
+1. Add two columns to `port_settings`.
+2. Read min and max from the seed files at runtime.
+
+**Recommendation.** Option 1, chosen by the Backend lead on 2026-10-31, so the app does not depend on contract files in production. It closes when the AI Team approves CT-18 v1.1. A `CHAMPION` row in `seed-spec.json` also carries `deployed_at`.
