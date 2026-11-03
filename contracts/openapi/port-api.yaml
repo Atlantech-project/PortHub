@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.1.0'
+  version: '1.2.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -26,6 +26,8 @@ servers:
 tags:
   - name: Auth
     description: Web sign-in with the Sanctum SPA session (CT-03). First call `GET /sanctum/csrf-cookie`.
+  - name: Audit
+    description: Audit log browsing for the Port Admin (FR-MD-16).
 paths:
   /api/v1/auth/login:
     post:
@@ -147,6 +149,88 @@ paths:
           $ref: '#/components/responses/AccountDisabled'
         '419':
           $ref: '#/components/responses/SessionExpired'
+  /api/v1/audit-logs:
+    get:
+      tags: [Audit]
+      operationId: auditLogsList
+      summary: Browse the audit log
+      description: >-
+        The port audit log, newest first (`occurred_at`, then `id`, descending), for the Port Admin (`PORT_GM`, ability
+        `audit.read`). Master-data history is the same list filtered by entity: `entity_type` is the table name and
+        `entity_id` the row, for example `?entity_type=berths&entity_id=3`. Rows written for a refused request have
+        `action` REJECTED_ATTEMPT; `actor` is null for the system or a worker. A read, so it is allowed in every licence mode.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: entity_type
+          in: query
+          required: false
+          description: Table name of the changed record, for example `berths`.
+          schema:
+            type: string
+            maxLength: 60
+        - name: entity_id
+          in: query
+          required: false
+          description: Id of the changed record. Use with `entity_type`.
+          schema:
+            type: integer
+            minimum: 1
+        - name: actor_id
+          in: query
+          required: false
+          description: The user who made the change.
+          schema:
+            type: integer
+            minimum: 1
+        - name: action
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/AuditAction'
+        - name: from
+          in: query
+          required: false
+          description: Rows at or after this instant. ISO 8601 with `Z` or an offset; a time without one is 422. Not after `to`.
+          schema:
+            $ref: '#/components/schemas/DateTime'
+        - name: to
+          in: query
+          required: false
+          description: Rows at or before this instant. Same format as `from`.
+          schema:
+            $ref: '#/components/schemas/DateTime'
+        - name: q
+          in: query
+          required: false
+          description: Text search on the actor, a case-insensitive part of the username or name.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        '200':
+          description: A page of audit rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLogEntry'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
 components:
   securitySchemes:
     cookieAuth:
@@ -385,6 +469,53 @@ components:
         must_change_password:
           type: boolean
           example: false
+    AuditAction:
+      type: string
+      enum: [CREATE, UPDATE, DELETE, STATUS_CHANGE, SAFETY_EXCEPTION, REJECTED_ATTEMPT]
+    AuditLogEntry:
+      type: object
+      description: One audit row. `before_state` and `after_state` hold the changed fields; CREATE has no before, DELETE no after, a refusal holds `route`, `status`, `code`, `reason` and `username` in `after_state`.
+      required: [id, actor, entity_type, entity_id, action, before_state, after_state, occurred_at]
+      properties:
+        id:
+          type: integer
+          example: 9012
+        actor:
+          type: object
+          nullable: true
+          description: Null for the system or a worker.
+          required: [id, name, username]
+          properties:
+            id:
+              type: integer
+              example: 41
+            name:
+              type: string
+              example: Port Admin
+            username:
+              type: string
+              example: port.admin
+        entity_type:
+          type: string
+          example: berths
+        entity_id:
+          type: integer
+          nullable: true
+          example: 3
+        action:
+          $ref: '#/components/schemas/AuditAction'
+        before_state:
+          type: object
+          nullable: true
+          additionalProperties: true
+          example: {name: 'Berth 3'}
+        after_state:
+          type: object
+          nullable: true
+          additionalProperties: true
+          example: {name: 'Berth 3 East'}
+        occurred_at:
+          $ref: '#/components/schemas/DateTime'
   responses:
     ValidationFailed:
       description: '422 VALIDATION_FAILED'
