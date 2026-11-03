@@ -266,6 +266,7 @@ This file lists every decision that must be closed before implementation, every 
 | Closing task | DEC-08 · Sprint 1 |
 | Affects | P3-I5 · AI-013 |
 | Decision | Closed (2026-10-27): Option 1. Workers read from the primary; six accounts (`w_part1`, `w_part2`, `w_yard`, `w_edi`, `w_validate`, `w_part3`); no DELETE, no DDL, column-level UPDATE on tables a worker does not own; no `audit_logs` access (the Backend writes all audit entries on C-06). Rule: **workers insert new rows; the Backend retires old ones** (REPLACED / ACTIVE transitions). Full matrix under "Final grants" below. The Backend writes the grants script. |
+| Proposed change | 2026-11-03 · AI-011 · Add `retry_count` to `w_yard`'s UPDATE columns on `yard_runs` in the final grants below · Reason: the grants script and `table-ownership.md` already have it, noting it "needs AI Team approval", and DEC-04 gives yard one retry · Evidence: `contracts/ai/table-ownership.md` change log (P1-B3), `contracts/db/schema.sql` · Impact: `w_yard`, CT-15; no grant change · Awaiting: Backend Team (Owner). Approved for the AI Team by MennaGamal-87 (AI lead), 2026-11-03 |
 
 <div dir="rtl">
 

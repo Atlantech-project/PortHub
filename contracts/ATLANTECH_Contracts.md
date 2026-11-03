@@ -264,6 +264,7 @@ One private channel per user, `private-user.{user_id}`, with two types: `TASK_UP
 | Reviewers | Backend Team · AI Team |
 | Output | `contracts/ai/envelope.schema.json` |
 | Status | Approved v1.0 · 2026-10-30 on Backend Team sign-off (DEC-04). Consolidates the envelope rules already approved in CT-09 to CT-14 and CT-16 |
+| Proposed change | 2026-11-03 · AI-011 · CT-08 v1.0 → v1.1 (minor): §6 step 3 no longer applies to a message whose `job_type` doesn't match the queue. The worker logs it at ERROR with `job_type`, `run_id` and queue, drops it and never claims · Reason: `run_id` refers to the table of the message's own job type (§2). The receiving worker has no UPDATE grant on that table, and claiming the same number in its own table could fail an unrelated run. A `project-ai` worker already behaves this way, as a recorded deviation · Evidence: `project-ai` `common/runtime/envelope.py`, `tests/integration/test_worker_runtime.py` `test_wrong_queue_never_touches_a_run_with_the_same_id` · Impact: AI workers; the Backend validates before RPUSH (§5), so this only guards against a Backend bug, and the run stays QUEUED for the P3-I2 sweeper · Awaiting: AI Team (Owner, JSON Schema), Backend Team (Owner, sending, and Reviewer) |
 
 The envelope is the outer JSON message for every job the Backend sends to an AI worker. Each job type's payload has its own schema (C-01 to C-05); this contract covers everything around it. The completion message going the other way is C-06 (CT-14).
 
@@ -1014,6 +1015,7 @@ FastAPI is cancelled (DEC-10), so validation is an async job. A result with viol
 | Reviewers | Backend Team |
 | Output | `contracts/ai/table-ownership.md` |
 | Status | Approved v1.1 · 2026-10-27 (plural table names, CT-17) · v1.0 2026-10-27 (DEC-02 · DEC-08) |
+| Proposed change | 2026-11-03 · AI-011 · CT-15 v1.1 → v1.2 (minor): add `retry_count` to the AI columns of `yard_runs` · Reason: DEC-04 gives yard one retry, CT-08 §6 step 5 counts retries where the column is granted, and `table-ownership.md` already grants it, noting it "needs AI Team approval" with a CT-15 / DEC-08 update. CT-08 §9's note on `retry_count` for `w_edi` and `yard_runs` is then out of date · Evidence: `contracts/ai/table-ownership.md` change log (P1-B3), `contracts/db/schema.sql`, `project-ai` `common/runtime/runs.py` · Impact: `w_yard`; no schema or grant change · Awaiting: Backend Team (Owner, Reviewer). Approved for the AI Team by MennaGamal-87 (AI lead), 2026-11-03 |
 
 **Rules:**
 
