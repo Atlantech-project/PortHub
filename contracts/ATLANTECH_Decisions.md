@@ -52,13 +52,13 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-39 | CT Supervisor status list | Backend Team | Closed | Sprint 6 |
 | DEC-40 | Mobile Acknowledge event type and payload | Backend Team | Closed | Sprint 6 |
 | DEC-41 | Automatic sync right after saving an event while online | Mobile Team | Open | Sprint 4 |
-| DEC-42 | Staff pages on the tablet and a provisioning screen | Leads Council | Open | Sprint 2 |
+| DEC-42 | Staff pages on the tablet and a provisioning screen | Leads Council | Closed | Sprint 2 |
 | DEC-43 | Recommendation confidence field on P-38 | AI Team | Open | Sprint 6 |
 | DEC-44 | Storing the clock-skew review note | Backend Team | Closed | Sprint 6 |
 | DEC-45 | Display time zone | Frontend Team | Open | Sprint 1 |
 | DEC-46 | Supported browsers and viewports | Frontend Team | Open | Sprint 1 |
 | DEC-47 | Backend environment for development and testing | Backend Team | Closed | Sprint 2 |
-| DEC-48 | Field roles on the web | Leads Council | Open | Sprint 2 |
+| DEC-48 | Field roles on the web | Leads Council | Closed | Sprint 2 |
 | DEC-49 | Status and error colours and the icon set | UI/UX Team | Closed | — |
 | DEC-50 | BAPLIE correction and withdraw | Leads Council | Closed | — |
 | DEC-51 | Shared berths | Leads Council | Closed | — |
@@ -1176,10 +1176,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | Screens OQ-9 · A-2 |
 | Owner | Leads Council |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-42 · Sprint 2 |
 | Affects | — |
-| Decision | ______ |
+| Decision | Closed (2026-11-01): Option 1. Staff pages on the tablet and a provisioning screen are not in the MVP, and no task builds them. Brought by Marwan (Backend lead) for the Leads Council. |
 
 <div dir="rtl">
 
@@ -1330,10 +1330,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | FE-OQ-12 |
 | Owner | Leads Council |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-48 · Sprint 2 |
 | Affects | FE-021 |
-| Decision | ______ |
+| Decision | Closed (2026-11-01): Option 1. A pilot, tug master or CT Supervisor who signs in on the web lands on P-20 with a "use the mobile app" message; there is no web version of My Tasks. Brought by Marwan (Backend lead) for the Leads Council. |
 
 <div dir="rtl">
 
