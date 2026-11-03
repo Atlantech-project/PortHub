@@ -1161,7 +1161,7 @@ Workers treat an unknown ENUM value they read as a warning and skip the row; the
 | Owner | AI Team (`seed-spec.json`) · Backend Team (`reference-seed.json`, seeders) |
 | Reviewers | Backend Team · AI Team (codes it depends on) |
 | Output | `contracts/ai/seed-spec.json` · `contracts/db/reference-seed.json` |
-| Status | Proposed v1.1 (DEC-59), waiting for AI Team approval · Approved v1.0 · 2026-10-27 (DEC-12 · DEC-23). Values marked ⟨AI⟩ arrive with the `seed-spec.json` PR |
+| Status | Approved v1.1 · 2026-11-04 (DEC-59; AI Team approval reported by Marwan) · Approved v1.0 · 2026-10-27 (DEC-12 · DEC-23). Values marked ⟨AI⟩ arrive with the `seed-spec.json` PR |
 
 **1. Scope.**
 

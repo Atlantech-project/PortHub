@@ -69,7 +69,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-56 | SaaS API location and licence signing key | Leads Council | Closed | — |
 | DEC-57 | Port API status codes, error catalogue and version token | Backend Team | Closed | — |
 | DEC-58 | Field task details from the CT-07 Mobile review | Backend Team | Closed | — |
-| DEC-59 | `port_settings` min and max, and CHAMPION `deployed_at` | Backend Team | Open | Sprint 2 |
+| DEC-59 | `port_settings` min and max, and CHAMPION `deployed_at` | Backend Team | Closed | Sprint 2 |
 
 ## Backend–AI integration decisions
 
@@ -1556,10 +1556,10 @@ This file lists every decision that must be closed before implementation, every 
 | --- | --- |
 | Source | CT-18 · `reference-seed.json` |
 | Owner | Backend Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-59 · Sprint 2 |
 | Affects | P1-B6 · P2-F9 · P2 settings page (P-62) · AI-009 · CT-17 · CT-18 |
-| Decision | ______ |
+| Decision | Closed (2026-11-04): Option 1. `port_settings` has `min_value` and `max_value` (added by P1-B6, backend PR #48), and a `CHAMPION` row in the seed carries `deployed_at`. The AI Team approved CT-18 v1.1 (reported by Marwan). |
 
 <div dir="rtl">
 
