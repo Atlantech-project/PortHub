@@ -1009,7 +1009,7 @@ Weekday and month are not inputs: the weekday effect is small (Sunday ≈ 7 % lo
 
 **Rule (per berthing request of a container vessel, `vessel_types.code` = `CONTAINER`):**
 
-1. **Discharge** = the number of `container_manifest_entries` rows of the request's ACTIVE BAPLIE (`baplie_files.status` = `ACTIVE`) whose `port_of_discharge` equals the port's UN/LOCODE (`port_profiles.port_code`). The code is read from the port's data, never hard-coded. Transshipment containers discharged here count; containers staying on board do not.
+1. **Discharge** = the number of `container_manifest_entries` rows of the request's ACTIVE BAPLIE (`baplie_files.status` = `ACTIVE`) whose `port_of_discharge` equals the port's UN/LOCODE (`port_profiles.port_code`). The code is read from the port's data, never hard-coded. Transshipment containers discharged here count; containers staying on board do not. If the port's UN/LOCODE (`port_profiles.port_code`) is not set, the job fails with `CONFIGURATION_ERROR` (CT-08 §7); discharge is never counted as zero.
 2. **Loading** = the request's optional loading count when set. When empty, loading = discharge, with flag `loading_estimated`.
 3. **Moves** = discharge + loading. One container is one move. Twin and tandem lifts are not credited, so service time errs long (conservative, as in DEC-20).
 4. **Out of the MVP:** restows, hatch-cover moves, and twin or tandem lift credit.
@@ -1020,10 +1020,12 @@ Weekday and month are not inputs: the weekday effect is small (Sunday ≈ 7 % lo
 **Open items (follow-ups; they don't reopen the decision):**
 
 1. Backend (CT-17): add the optional loading-count field to the berthing request (`berthing_requests` has none today).
-2. Backend: document the gate in rule 5 in the solve trigger (CT-10).
+2. Backend (CT-10): today `NEW_REQUEST` is enqueued when Part 1 finishes with `WINDOWS_FOUND`, without checking the BAPLIE. For a container vessel it must wait for the later of `WINDOWS_FOUND` and the BAPLIE becoming ACTIVE. Until this is done, such requests reach the solver early, are left out with `MISSING_MOVES`, and nothing re-triggers them.
 3. CT-10: add `MISSING_MOVES` as a new value. CT-10 has no per-request reason list for a request that is left out (per-request `outcome` is `SOLVED`, `FIFO_FALLBACK` or `NO_FEASIBLE_PLAN`), so Backend and AI Team choose where it goes.
 4. AI Team: the B3 basis for vessels other than container vessels.
 5. Terminal operations: confirm that loading ≈ discharge is a fair default for Damietta.
+6. Backend / seed (CT-18): set `port_profiles.port_code` for Damietta (`EGDAM`); it is nullable and empty in the reference seed.
+7. AI-030: confirm the port-of-discharge qualifier against the SMDG BAPLIE message implementation guides (2.2.1 and 3.1.1), not the samples. The corpus file `01-valid-221.edi` and the CT-12 example put the discharge port on `LOC+12` and `CNSHA` on `LOC+11`, which may not match the guide; if they are wrong, correct them (CT-12).
 
 **References:**
 
