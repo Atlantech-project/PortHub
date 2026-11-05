@@ -1,11 +1,18 @@
 # ATLANTECH — Decisions, Conflicts and Open Points
 
-This file lists every decision that must be closed before implementation, every conflict between the source documents, and every open point. Each item has a fixed ID from `DEC-01` to `DEC-57`.
+This file lists every decision that must be closed before implementation, every conflict between the source documents, and every open point. Each item has a fixed ID from `DEC-01` to `DEC-59`.
 
 - **Closing task:** has the same ID as the item and belongs to the owner team. It sits in the sprint where the first task that needs the decision starts, and is closed at that sprint's FRR or earlier.
 - **Status:** `Open` needs a decision by its closing sprint. `Closed` is already settled and kept for reference.
 - **Recommendation:** my proposal based on the documents. The final decision is written in the "Decision" row when the Leads Council closes the item.
 - **القصة:** under each item, a short story in Arabic that explains where the problem is.
+
+**Single source of truth.** This file is the only record of project decisions; there is no separate decision log. Every change is made directly in the entry it concerns:
+
+- **Edit, don't duplicate.** Update the existing `DEC-` entry for its topic. A decision that belongs to one AI task and has no `DEC-` ID goes in [AI task decisions](#ai-task-decisions), keyed by the task ID. New official `DEC-` IDs are never assigned outside the Leads Council.
+- **Proposed until approved.** A proposed change is written as a `Proposed change` row in the entry's table (date · task · change · reason · evidence · awaiting whom); the Status and Decision rows stay as they are until the owner approves it.
+- **Approved.** The approval is written into the Status and Decision rows, with who approved it and when, and the `Proposed change` row is removed.
+- **Follow-ups.** A sub-detail left unresolved by an approved decision is listed under the entry as a follow-up; it does not reopen the decision.
 
 ## Summary
 
@@ -30,8 +37,8 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-17 | C-04 · BAPLIE parse | AI Team | Closed | Sprint 1 |
 | DEC-18 | C-05 · Validation | AI Team | Closed | Sprint 1 |
 | DEC-19 | C-06 · Completion message | AI Team | Closed | Sprint 1 |
-| DEC-20 | Tug-count formula | AI Team | Open | Sprint 2 |
-| DEC-21 | Phase 1 delay-risk rule | AI Team | Open | Sprint 3 |
+| DEC-20 | Tug requirement formula | AI Team | Closed | Sprint 2 |
+| DEC-21 | Phase 1 delay-risk rule | AI Team | Closed | Sprint 3 |
 | DEC-22 | Financial-impact data in ranking | AI Team | Open | Sprint 4 |
 | DEC-23 | Objective terms, weights and number of options | AI Team | Closed | Sprint 1 |
 | DEC-24 | Part 1 settings: horizon, time step, minimum window, slot | AI Team | Open | Sprint 4 |
@@ -605,16 +612,18 @@ This file lists every decision that must be closed before implementation, every 
 
 ## AI decisions (inputs and logic)
 
-### DEC-20 · Tug-count formula
+### DEC-20 · Tug requirement formula (N_min, N_cap, BP_req per berthing request)
 
 | | |
 | --- | --- |
 | Source | OD-04 · RSK-01 |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-20 · Sprint 2 |
 | Affects | AI-054 · AI-055 |
-| Decision | ______ |
+| Decision | Closed (2026-11-03), **interim tables**: the hybrid in "Decision detail" below. Tug requirements are computed before the solver, outside CP-SAT, and passed to it per berthing request as `N_min`, `N_cap`, `BP_req` (tonnes), `eligible_tugs` and flags. The values are interim until the open items below are settled. |
+| Agreed with | Mostafa Mohamed Rashwan, Leads Council, 2026-11-03. AI lead approval: Menna Gamal (AI lead, @MennaGamal-87), 2026-11-03. |
+| Implementation | `project-ai` `part2/tugs.py`, `part2/tug_rules.json`, `tests/unit/part2/test_tugs.py` (AI-054). CP-SAT constraints: AI-055. |
 
 <div dir="rtl">
 
@@ -631,16 +640,89 @@ This file lists every decision that must be closed before implementation, every 
 
 **Recommendation.** Request the formula formally in Sprint 1. If it does not arrive, the provisional table is marked "unvalidated" in the rationale and can be replaced without code changes (pluggable rule).
 
+**Decision detail.** Option 2, extended to a hybrid: a table by LOA, with a mass-based bollard pull for tankers and bulk carriers. No formula has arrived from the Tug Manager or Marine Safety Officer, and Sprint 2 needs a rule. The rules are from literature and not yet validated by them, and they can be replaced without code changes.
+
+**Options considered:**
+
+| Option | Result |
+| --- | --- |
+| Fixed table by length only | Rejected: ignores vessel mass for heavy, slow ships |
+| Hybrid: table by LOA, plus mass-based bollard pull for tankers and bulk carriers | **Chosen** |
+| Physics only | Rejected: needs windage and environmental data not available in v1 |
+| Free solver choice | Rejected: the solver could choose too few tugs |
+
+**Calculation (per berthing request):**
+
+1. **Compulsory towage.** If `gross_tonnage` is below `T_COMPULSORY`, `pilot_requested` is `False` and there is no `pilot_override`: `N_min` = `N_cap` = `BP_req` = 0. `T_COMPULSORY` = 1000, interim and conservative. If `pilot_requested` is unknown below `T_COMPULSORY`, the table applies, with flag `pilot_request_unknown`.
+2. **Displacement, only for step 3's types.** Δ = LOA × beam × draught × Cb × 1.025 (tonnes).
+   - **Draught:** `berthing_requests.arrival_draft`; if missing, `vessels.max_draft` with flag `max_draft_used`.
+   - **Cb:** `berthing_requests.block_coefficient`; if missing or outside [0.50, 0.90], bulk carrier 0.80, tanker 0.80, container 0.65, other 0.85, with flag `cb_fallback_used`.
+   - **LOA instead of LBP** slightly overestimates Δ, accepted as conservative. GT and NT are never used as a weight: they measure volume.
+3. **Mass-based bollard pull, `TANKER` and `BULK_CARRIER` only.** BP_mass = 60 × Δ / 100,000 + 40 (tonnes).
+4. **Table: MPA's column for vessels with power (interim).** Upper LOA limits are inclusive, so a decimal LOA between bands takes the higher band. `BP_floor` is N_base × the minimum, derived here; MPA doesn't state it.
+
+   | LOA (m) | N_base | Min BP per tug (t) | BP_floor (t) |
+   | --- | --- | --- | --- |
+   | ≤ 60 | 1 | 10 | 10 |
+   | ≤ 122 | 2 | 10 | 20 |
+   | ≤ 200 | 2 | 17 | 34 |
+   | ≤ 280 | 2 | 25 | 50 |
+   | > 280 or GT ≥ 75,000, draught < 17 m | 4 | 25 | 100 |
+   | > 280 or GT ≥ 75,000, draught ≥ 17 m | 4 | 45 | 180 |
+
+5. **Final values.** `BP_req` = ceil(max(BP_mass if it applies, BP_floor)). `N_min` = N_base. `N_cap` = `N_min` + 1. `eligible_tugs`: tugs whose `tug_power` is in bollard pull and at least the minimum per tug. This is by rating only: availability is AI-055's job (DEC-32). A tug rated in `HP` or `KW` is excluded with flag `tug_power_not_bollard_pull`; no conversion is agreed.
+6. **Pilot override.** An optional `pilot_override` replaces `N_min`, `BP_req` or both, with flag `pilot_override`. `N_cap` follows the overridden `N_min`, and eligibility stays by the band from step 4.
+
+Every result carries flag `rules_unvalidated` until the rules are validated and `part2/tug_rules.json` has status `APPROVED`. Closing this decision doesn't validate them: the file stays `PROPOSED` (see the open items).
+
+**Worked example:** bulk carrier, LOA 225 m, beam 32 m, draught 13 m, Cb 0.80, GT 40,000: Δ = 76,752 t, BP_mass = 86.05 t, `BP_req` = 87, `N_min` = 2, `N_cap` = 3.
+
+**Thrusters:** credit for bow or stern thrusters is out of scope for v1. The berthing request has no thruster data, so results are conservative.
+
+**CP-SAT interface (AI-055).** For each request r and tug t, with x[r,t] ∈ {0,1}:
+- Σ x[r,t] over eligible tugs ≥ `N_min`
+- Σ x[r,t] over eligible tugs ≤ `N_cap`
+- Σ BP(t) · x[r,t] over eligible tugs ≥ `BP_req`
+- x[r,t] = 0 for a tug that isn't eligible
+
+If infeasible, the request is reported as infeasible; the requirement is never silently relaxed.
+
+**Data requirements:** `vessels.loa`, `vessels.beam`, `vessels.max_draft`, `vessel_types.code`, `berthing_requests.arrival_draft`, `gross_tonnage`, `block_coefficient`, `tugboats.tug_power`, `tugboats.tug_power_unit`. Missing from the schema: `pilot_requested` and a tug-count `pilot_override`. A missing or non-positive LOA, beam, GT or draught raises an error.
+
+**Deviation from AI-012:** the values are in `part2/tug_rules.json`, not `port_settings`, whose `setting_value` is `varchar(255)` and can't hold the table or its sources. A change needs a deploy, not a code change.
+
+**Open items (follow-ups; they don't reopen the decision):**
+
+1. Confirm `T_COMPULSORY` (1000 or 2000) with the Alexandria Port Authority.
+2. Replace the interim MPA table with the Alexandria Port Authority's own table.
+3. Confirm whether the form's draught is the arrival draught or the maximum draught. The schema holds `arrival_draft`, with `vessels.max_draft` as the fallback.
+4. v2: wind-based bollard pull for high-windage ships: BP_wind = 1.25 × 0.5·ρ·C·A_L·V²/9810. Needs windage area and gust forecasts.
+5. Fitting SWL limit on `eligible_tugs`: not applied. Check whether the schema has the field; `contracts/db/schema.sql` on PortHub `main` at `b4d2deb` has no match for `swl`, `safe_working` or `fitting`.
+6. After the validation in item 9, change `part2/tug_rules.json` from `PROPOSED` to `APPROVED`, which removes the `rules_unvalidated` flag, in a separate code task. That task also updates `tests/unit/part2/test_tugs.py`, which asserts `PROPOSED`, and `part2/README.md`, which still says DEC-20 is Open.
+7. Vessels without power: MPA has a separate, higher column, which isn't used. No field says which applies.
+8. Tug Manager: decide whether `LNG_CARRIER` should use the mass-based formula. It's "other" for now.
+9. Tug Manager and Marine Safety Officer: validate the rules (AI-005). `DWT` isn't used.
+10. Backend: add `pilot_requested` to the request, and a place for a tug-count override.
+11. Tug Manager: enter fleet power in bollard pull, or agree a conversion.
+
+**References:**
+- MPA Singapore Tug Assignment Guidelines, rev. 11 Feb 2025: https://www.mpa.gov.sg/api/media/c3d47522-816b-4197-b4f2-8bbaa3f87097/tug_assignment_guidelines.pdf. Checked on 2026-11-03: the column for vessels with power matches the table.
+- Formula: https://www.seanews.com.tr/authors/cahit-istikbal/what-is-bollard-pull-and-how-to-calculate-it/162591/. Checked on 2026-11-03: confirms the formula and the example of 10,000 t giving 46 t, as a rough minimum. It names neither Hensen nor ship types.
+- Hensen, *Tug Use in Port* (IMO MSC.1/Circ.1101): cited by the AI lead for the attribution and the limit to tankers and bulk carriers; not checked.
+- Compulsory towage, cited by the AI lead, not checked: Alexandria Port Authority, https://apa.gov.eg/en/alex-port-navigation-data/ (above 2000); Ministry of Transport, https://www.mts.gov.eg/en/port/%D9%85%D9%8A%D9%86%D8%A7%D8%A1-%D8%A7%D9%84%D8%AF%D8%AE%D9%8A%D9%84%D8%A9/ (1000 and above).
+
 ### DEC-21 · Phase 1 delay-risk rule
 
 | | |
 | --- | --- |
 | Source | OD-05 |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-21 · Sprint 3 |
-| Affects | AI-053 |
-| Decision | ______ |
+| Affects | AI-053 · P-38 (Frontend Team) |
+| Decision | Closed (2026-11-05), **interim rule**: Option 2 as a level, not a probability. B4 writes LOW / MEDIUM / HIGH with its driving factors, from a weather factor and a congestion factor, or NULL when the forecast is missing or stale. Thresholds are calibrated on IMF PortWatch and Open-Meteo history for Damietta (2019-01-01 to 2026-10-30) and are interim until our own data allows M4 (data-gated, AI-001). Interim storage: the level is written to the existing column `recommendation_options.delay_risk` as a fixed code (LOW = 0.100, MEDIUM = 0.500, HIGH = 0.900), with no schema change. Full rule in "Decision detail" below. |
+| Agreed with | Mostafa Mohamed Rashwan, Leads Council, 2026-11-05. Decided by the Leads Council; the AI Team (owner) is informed. |
+| Implementation | `project-ai` AI-053 (not yet implemented). |
 
 <div dir="rtl">
 
@@ -656,6 +738,71 @@ This file lists every decision that must be closed before implementation, every 
 2. A simple rule from weather margin and port congestion.
 
 **Recommendation.** A simple rule approved in Sprint 1 so B4 is fully delivered. If not approved, it writes NULL and P-38 shows "Not assessed".
+
+**Decision detail.** Option 2, as a level and not a probability. There is no delay history to learn from, so the rule is calibrated on public data for Damietta and is interim until our own operational data allows M4 (data-gated, AI-001).
+
+**Rule (per recommendation, at planning time, over the vessel's window):**
+
+1. **Weather factor W**, from the Open-Meteo forecast for the port:
+   - HIGH: max gust > 35 kn, or max wind > 20 kn, or max wave height > 2.0 m
+   - MEDIUM: max gust 30–35 kn, or max wave height 1.5–2.0 m
+   - LOW: otherwise
+
+   These are forecast-model screening levels, NOT safety limits. When the `safety_constraints` defaults exist (DEC-30 TR-10), headroom to those limits is added as an extra HIGH/MEDIUM condition.
+2. **Congestion factor C** = expected arrivals in the 24 h around the ETA ÷ the median daily arrivals of the last 28 days:
+   - MEDIUM: ratio ≥ 1.3
+   - HIGH: ratio ≥ 1.6
+
+   A ratio is used so the rule is scale-free (PortWatch undercounts versus the port authority, and the live system uses its own counts).
+3. **Post-storm backlog.** If the window starts 1–3 days after a day where W was HIGH, C goes up one level (capped at HIGH).
+4. **Result** = max(W, C). The rationale names the factor(s) that set the level.
+5. **NULL** when the forecast is missing or older than `part1_stored_data_max_age_hours` (48).
+6. Every result carries flag `rules_unvalidated` until the rule is validated.
+7. **Storage (interim).** The level is written to the existing column `recommendation_options.delay_risk` as a fixed code: LOW = 0.100, MEDIUM = 0.500, HIGH = 0.900. These are level codes, NOT probabilities. Conditions:
+   - (a) P-38 and every other screen show the level only, never the number (< 0.34 LOW, < 0.67 MEDIUM, otherwise HIGH);
+   - (b) each recommendation records the rule version in `solver_run_model_versions`, so Phase 1 codes can be told apart from M4's calibrated probabilities later;
+   - (c) Part 3 evaluates Phase 1 values as levels only, with no probability metrics (for example Brier score) on them;
+   - (d) when M4 is promoted, the same column carries its probability and the codes stop.
+
+Weekday and month are not inputs: the weekday effect is small (Sunday ≈ 7 % lower) and seasonality is already captured by the forecast.
+
+**Evidence (Damietta, PortWatch port274 / EG DAM, 2,860 days, no gaps):**
+
+- Daily calls rose from ≈5 (2019–2022) to ≈7 (2023–2026). 2023+ percentiles: median 7, P75 9, P90 11, P95 12 → ratio cut-offs 9/7 ≈ 1.3 and 11/7 ≈ 1.6.
+- Busiest months May–June (≈8/day), quietest December (5.7).
+- Calls relative to the surrounding 29-day median, by weather:
+
+  | Weather | Calls vs normal | Days with 0–1 calls |
+  | --- | --- | --- |
+  | gust ≤ 30 kn and wave ≤ 1.5 m | normal | 2–3 % |
+  | gust 30–35 kn or wave 1.5–2 m | −15 % | 7–10 % |
+  | gust 35–40 kn | −37 % | 18 % |
+  | gust > 40 kn, wind > 20 kn or wave > 2 m | −41 % to −49 % | 25–40 % |
+
+- Rough days (W = HIGH) are 3.9 % of days, ≈3 a month Jan–Mar, ≈0 Jun–Oct; 80 episodes, 57 of them one day long.
+- Day 2 and day 3 after an episode: +11 % and +17 % above normal (backlog).
+- Same rough days at neighbouring ports: Alexandria 0.56, El Dekheila 0.47, Port Said 0.80 of normal → regional weather effect.
+
+**Limitations:**
+
+- PortWatch is an AIS estimate and reads lower than the port authority bulletin (4 checked days: bulletin 9–15 arrivals, PortWatch 3–12); only relative patterns are used.
+- ERA5 reanalysis smooths peaks (max wind never above 25 kn in 8 years); thresholds are in model units and must be applied to Open-Meteo forecast values, not anemometer readings.
+- Fewer calls is a proxy for slow-down or closure, not a measured delay.
+
+**Open items (follow-ups; they don't reopen the decision):**
+
+1. Frontend: P-38 shows the level, never the `delay_risk` number (condition a). Column: `recommendation_options.delay_risk` `decimal(4,3)`, CHECK `chk_ro_values` 0–1 (`schema.sql` lines 1149–1178), unchanged.
+2. AI-053 implements the rule with the thresholds in a data file (like `part2/tug_rules.json`, status `PROPOSED`), not in code.
+3. Recalibrate the cut-offs from our own operational data once available; M4 replaces the rule only after beating it (AI-001, DEC-30 TR-05).
+4. P-38 shows "Not assessed" when the level is NULL (Frontend).
+5. Open-Meteo free tier is non-commercial only; the commercial licence is DEC-26.
+6. Record every input (W values, C ratio, post-storm flag) with each recommendation so M4 has features from day one.
+
+**References:**
+
+- IMF PortWatch Daily_Ports_Data (ArcGIS FeatureServer), port274.
+- Open-Meteo Historical (ERA5) and Marine archive APIs, Damietta (31.46, 31.76), offshore wave point (31.53, 31.76). Weather data by Open-Meteo.com (CC BY 4.0).
+- Data script: `research/fetch_damietta_history.py` (copy with the retry fix).
 
 ### DEC-22 · Financial-impact data in ranking
 
@@ -870,6 +1017,7 @@ This file lists every decision that must be closed before implementation, every 
 | Closing task | DEC-30 · Sprint 2 |
 | Affects | AI-008 · AI-072 |
 | Decision | ______ |
+| Proposed change | 2026-10-31 · AI-008 · Adopt the thresholds register below as the DEC-30 decision: 6 `FILLED`, 13 `DEFERRED` (each with an owner and the task that needs it), 1 `OUT OF MVP SCOPE` and 7 `REFERENCE` rows. A value becomes `AGREED` only when this change is approved · Reason: there is no single register yet. CT-18 waits on DEC-30 for `drift_psi_threshold`, `drift_mae_threshold` and the `safety_constraints` defaults, and AI-016 waits on it for the coverage gate · Evidence: the register below; `docs/tasks/status/AI-008.md`. Every `FILLED` value is traced to a non-NFR source; NFR figures and IDs are not used as sources (user ruling, 2026-10-31) · Impact: AI-016 · AI-021 · AI-024 · AI-044 · AI-061 · AI-071 · AI-072 · AI-090 · AI-101 to AI-103 · AI-104; CT-18 seed (Backend Team); CT-25 (QA Team) · Awaiting: AI Team owner, with approval by the whole team (option 1) |
 
 <div dir="rtl">
 
@@ -884,6 +1032,46 @@ This file lists every decision that must be closed before implementation, every 
 1. One register owned by the AI Team and approved by the whole team.
 
 **Recommendation.** This option: inputs prepared (QA-AI1), approved in Sprint 1, final write-up in AI-008.
+
+**Proposed thresholds register (AI-008, 2026-10-31; not approved).** This register is part of the Proposed change above.
+- **Labels:** `TR-xx` labels are local to this register. They are not official IDs.
+- **Sources:** NFR figures and IDs are not used as sources.
+- **Statuses:**
+  - `FILLED`: a non-NFR document states the value.
+  - `DEFERRED`: no agreed value yet; the owner and the task that needs it are named.
+  - `OUT OF MVP SCOPE`: excluded by a decision.
+  - `REFERENCE`: defined by another decision or contract, not by this register.
+- **Approval:** values become `AGREED` only when DEC-30 is approved.
+
+| TR | Threshold | Status | Value | Source | Owner | Needed by |
+| --- | --- | --- | --- | --- | --- | --- |
+| TR-01 | Drift PSI threshold (`drift_psi_threshold`) | DEFERRED | — | CT-18 §4 (⟨AI⟩ value) | AI Team | AI-072 · CT-18 seed |
+| TR-02 | Drift rolling-MAE threshold (`drift_mae_threshold`) | DEFERRED | — | CT-18 §4 (⟨AI⟩ value); one key covers M2, M3 and M4, which have different units | AI Team | AI-072 · CT-18 seed |
+| TR-03 | Rolling-MAE window length | DEFERRED | — | Arch §9.1 (C2) | AI Team | AI-072 |
+| TR-04 | Data sufficiency per model (M2, M3, M4, C4) | DEFERRED | — | Arch §9.5 gives an estimate (about 9,500 calls a year, "several months"), not a threshold | AI Team | AI-024 (records the criteria here) |
+| TR-05 | Phase 2 promotion margin over the Phase 1 baseline (M2, M3, M4) | DEFERRED | — | Arch §10; the meaning of "MAE" for the M4 classifier is open (OD-16) | AI Team | AI-101 · AI-102 · AI-103 |
+| TR-06 | C3 Champion/Challenger guard | FILLED | Challenger promoted only if not worse on both MAE and override rate, on held-out time-based data; no numeric margin | Arch §9.3 · UML AD-16 P6/D3 | AI Team | AI-104 |
+| TR-07 | Tide prediction tolerance and test period | DEFERRED | — | DEC-27 (tolerance set in DEC-30) | AI Team, with the DEC-27 source | AI-021 |
+| TR-08 | BAPLIE size classes and parse-time targets | OUT OF MVP SCOPE | — | Out of MVP scope – per DEC-17 Decision row and CT-12 v1.0 | — | — |
+| TR-09 | Test coverage gate | DEFERRED | — | AI-016 acceptance criterion "Coverage gate enforced at the agreed value" · AI-016 task decision item (8) | AI Team | AI-016 (`fail_under`) |
+| TR-10 | Port-wide `safety_constraints` defaults (wind, gust, visibility, wave, minimum UKC and others) | DEFERRED | — | CT-18 §1 and §7 | AI Team (seed); input from the Marine Safety Officer through CT-25 (QA Team) | AI-044 · CT-18 seed |
+| TR-11 | Window-accuracy definition (C1) | DEFERRED | — | AI-071 (OD-16) | AI Team | AI-071 |
+| TR-12 | Stored environmental data freshness | FILLED | 48 h, and the data must cover the assessment horizon | CT-18 v1.0 `part1_stored_data_max_age_hours` · DEC-12 (Closed) · Arch §7.2 · UML 2.10 | AI Team | AI-025 · AI-041 |
+| TR-13a | CP-SAT solver time limit | FILLED | 10 s (configurable default; min 1, max 120) | CT-18 v1.0 `solver_time_limit_seconds` · CT-10 | AI Team | AI-055 |
+| TR-13b | Total Part 2 pipeline time | DEFERRED | — | No non-NFR source | AI Team | AI-061 |
+| TR-14a | Recommendation latency percentiles under concurrency | DEFERRED | — | No non-NFR source | AI Team | AI-061 |
+| TR-14b | Parallel solves | DEFERRED | — | No non-NFR source | AI Team | AI-061 |
+| TR-15 | Option equivalence | FILLED | 10 % of option 1 | DEC-23 (Closed) · CT-18 `solver_option_equivalence_pct` · CT-10 | AI Team | AI-055 |
+| TR-16 | Validation timeout and result TTL | FILLED | 15 s / 600 s | CT-13 · CT-18 `validation_timeout_seconds`, `validation_result_ttl_seconds` | AI Team | AI-060 · AI-067 |
+| TR-17 | Part 1 retries | FILLED | 3 | DEC-04 (Closed) · CT-08 v1.0 · CT-18 `part1_max_retries` | AI Team | AI-048 |
+| TR-18 | Worker restart time and availability | DEFERRED | — | No non-NFR source; CT-16 raises an alert when a worker is DOWN for more than 2 minutes | AI Team; consulted: Backend Team | AI-090 |
+| TR-19 | Evaluation key question (not a threshold) | REFERENCE | — | Master_Context §4 (Port Authority daily bulletin): whether the port can handle more than about 26 vessels a day, assessed experimentally, not a pass/fail limit | AI Team | AI-084 |
+| TR-20 | Deviation significance per operation type (UML AD-16 D1) | REFERENCE | — | DEC-09 (Open, Sprint 6); a Port Admin setting | Backend Team | — |
+| TR-21 | Part 1 horizon, time step, minimum window, demand slot, gap tolerance | REFERENCE | — | DEC-24 (Open) | AI Team | — |
+| TR-22 | Uncertainty margin and window confidence | REFERENCE | — | DEC-25 (Open; the MVP uses zero margin and `confidence` NULL) | AI Team | — |
+| TR-23 | Tug count per vessel | REFERENCE | — | DEC-20 (Closed, interim tables) | AI Team | — |
+| TR-24 | `run_stale_after_seconds` | REFERENCE | — | CT-18 §4 and §7 (the AI Team supplies it with its calculation) | AI Team | — |
+| TR-25 | Clock-skew suspect rule | REFERENCE | — | `ClassDiagramContext.md` OI-06 | Backend Team | — |
 
 ### DEC-31 · Part 3 scheduling host
 
@@ -946,6 +1134,7 @@ This file lists every decision that must be closed before implementation, every 
 | Closing task | DEC-33 · Sprint 7 |
 | Affects | AI-084 |
 | Decision | ______ |
+| Proposed change | 2026-10-31 · AI-008 · Draft manual-planning baseline procedure (option 1): (1) **Scenarios:** agreed replay scenarios built from the reference-port data (CT-25, AI-022), each value labelled published or synthetic. (2) **Manual plan:** each scenario is planned with documented manual planning rules agreed with a domain expert. **These rules are still pending** (QA-AI1). (3) **AI and FIFO:** the same scenarios run through the AI recommendation and the FIFO fallback. (4) **Indicators:** the three plans are compared on the six Master_Context §4 indicators: conflicts detected and resolved; resource utilisation (berths, tugs, pilots, equipment); avoidable idle time; estimated operational cost; feasibility and quality of recommendations; downstream effect on re-handling where demonstrated. (5) **Roles:** the QA Team prepares the procedure and scenarios, a domain expert agrees the manual rules, and the AI Team runs the comparison in AI-084 · Reason: AI-008 acceptance criterion "Manual baseline procedure documented"; AI-084 needs a defined baseline · Evidence: Master_Context §4 · Proposal §12 (Table 8) · DEC-33 option 1 · AI-084 · Impact: AI-062 · AI-084; QA Team (QA-AI1, CT-25) · Awaiting: AI Team owner; QA Team and a domain expert for the manual rules |
 
 <div dir="rtl">
 
@@ -1575,3 +1764,145 @@ This file lists every decision that must be closed before implementation, every 
 2. Read min and max from the seed files at runtime.
 
 **Recommendation.** Option 1, chosen by the Backend lead on 2026-10-31, so the app does not depend on contract files in production. It closes when the AI Team approves CT-18 v1.1. A `CHAMPION` row in `seed-spec.json` also carries `deployed_at`.
+
+## AI task decisions
+
+Decisions that belong to one AI backlog task and have no `DEC-` ID. Each is keyed by its task ID; no `DEC-` ID is assigned here. Their text was first drafted on 2026-10-27 as entries DL-001 and DL-002 of the retired decision log and moved here by SETUP-002 unchanged in substance. The one exception: DL-002's per-module queue assignments are left to the AI-010 follow-up on the worker-to-module mapping.
+
+| Task | Item | Owner | Status |
+| --- | --- | --- | --- |
+| AI-001 | AI scope and component inventory | AI Team | Closed |
+| AI-010 | AI code repository location and module structure | AI Team | Closed |
+| AI-016 | CI provider, Python tooling and quality gates | AI Team | Proposed |
+| AI-014 | Unit, datum and time utilities | AI Team | Proposed |
+| AI-003 | AIBD-032 and AIBD-036 outcome for contract v1 | AI Team | Closed |
+| AI-012 | Configuration management | AI Team | Proposed |
+| AI-011 | Shared worker runtime | AI Team | Proposed |
+| AI-013 | Data-access layer | AI Team | Proposed |
+
+### AI-001 · AI scope and component inventory
+
+| | |
+| --- | --- |
+| Source | AI-001 · Master_Context §6 · `ATLANTECH_AI_ARCHITECTURE.md` §4.3, §8.14, §9.5, §14, §15 · plan OD-17, OD-23 (plan not in this repository) |
+| Owner | AI Team |
+| Status | Closed |
+| Affects | AI-009 · AI-010 · AI-065 · AI-073 · DEC-21 · DEC-25 · DEC-29 · DEC-31 · DEC-55 |
+| Decision | **MVP:** B1 BAPLIE parser (EDI Parser worker) · A1 data ingestion · A2 astronomical tide · A3 surge residual · A4 threshold feasibility · A5 UKC with Barrass squat · A7 demand aggregation (Phase 1) · B2 constraint filter · B3 service time (Phase 1 formula) · B4 delay risk (Phase 1 rule, or NULL until DEC-21 is closed) · B5 CP-SAT solver with FIFO fallback · B6 template rationale · B7 re-planning · B8 yard placement · C1 outcome evaluation · C2 drift monitor. **DATA-GATED:** M2 service time LightGBM (B3 Phase 2) · M3 demand LightGBM (A7 Phase 2) · M4 delay-risk LightGBM (B4) · C3 guarded retraining · C4 forecast bias correction. A data-gated model replaces its Phase 1 path only after passing its baseline comparison. **OUT-OF-SCOPE (future work):** A6 uncertainty margin (the MVP uses zero margin and `confidence` = NULL, DEC-25) · TIMING terminal recommendations and NCT storage allocation (DEC-55) · Vision module · any cross-port or SaaS model sharing. **B8:** working label for Part 2 yard placement (UML assigns it to Part 2; AI Architecture v3 does not list it, while this repository's `ATLANTECH_AI_ARCHITECTURE.md` §8.14 and §14 do). **Owner of B8: AI Team.** Its method is set by DEC-29; the Part 3 scheduling host by DEC-31. |
+| Approval | The AI-001 decision record supplied on 2026-10-27 states `Closed`, approved by AI Lead · Team Lead (roles as named in that record), with the decision date left blank. The repository user (Git user `mostafa`) explicitly approved this inventory, and set the B8 owner to AI Team, on 2026-10-28 (SETUP-002). No other approver names or dates are recorded. |
+
+**Follow-ups (they don't reopen the decision):**
+
+- The supplied record's decision date is blank; add it if the AI Lead or Team Lead provides it.
+- The methods behind several components are still open: DEC-21 (B4 rule), DEC-25 (A6 and confidence), DEC-29 (B8 method), DEC-31 (Part 3 host).
+- `Master_Context.md` §6.4 calls C3/C4 "future work", while this decision and Architecture §9.5 call them data-gated. The owner of `Master_Context.md` should align its wording.
+
+### AI-010 · AI code repository location and module structure
+
+| | |
+| --- | --- |
+| Source | AI-010 · `Master_Context.md` §5.4 · `ATLANTECH_AI_ARCHITECTURE.md` I-5, §4.3 · D18 · plan F-18 (plan not in this repository) |
+| Owner | AI Team |
+| Status | Closed |
+| Affects | AI-011 – AI-016 · CT-26 |
+| Decision | (1) AI code lives in `Atlantech-project/project-ai`, with one `feature/<task>` branch per task from `develop`, merged by pull request. (2) Top-level modules: `common/` (shared by all workers), `edi/` (EDI Parser, B1), `part1/` (A1–A7), `part2/` (B2–B8) and `part3/` (C1–C4, periodic). Each part is one deployable worker (D18). Implemented as a documentation-only skeleton by AI-010 (PR #3, merged into `develop` as `9edc32e`). |
+| Approval | AI-010 was merged into `develop` on 2026-10-27 (PR #3). The repository user (Git user `mostafa`) approved the location and the five modules as a decision on 2026-10-28 (SETUP-002). No other approver names are recorded. |
+
+**Follow-ups (they don't reopen the decision):**
+
+- **Worker-to-module mapping for yard and validation.** The module READMEs from AI-010 still place B8 on `queue:part2` and have no validation worker. The newer closed decisions use a separate yard worker on `queue:yard` (`w_yard`, DEC-16, CT-11) and a validation worker on `queue:validate` (`w_validate`, DEC-03, DEC-18, CT-13), with accounts set by DEC-08. Where these two workers live in the module tree, and the matching README text, still need to be decided. That README update should also refresh the "Pending" list in `common/README.md`, which still names DEC-02 and DEC-10, both now Closed.
+- **Left open by AI-010:** Python tooling, version, dependency management and environment (OQ-1); the in-repo location of schemas (OQ-2); tests, tools and model-artefact locations (OQ-7). The "FastAPI module" question is moot, because DEC-10 cancelled FastAPI.
+- `Master_Context.md` §5.4 lists `project-backend`, `project-frontend` and `project-mobile` but not `project-ai`. Its owner should add it.
+
+### AI-016 · CI provider, Python tooling and quality gates
+
+| | |
+| --- | --- |
+| Source | AI-016 (backlog: "CI provider not documented") · AI-010 follow-ups OQ-1 (Python tooling, version, dependency management, environment) and OQ-7 (test location) · CT-17 §2 (MySQL 8.4, UTC sessions) · CT-08 (unprefixed keys, RPUSH/BLPOP) · AI-012 AC "No secret in the repository (scan in CI)" |
+| Owner | AI Team |
+| Status | Proposed |
+| Affects | AI-011 – AI-015 (all code is written under these gates) · AI-012 (CI secret scan) · AI-008 / DEC-30 (coverage figure) |
+| Decision | ______ |
+| Proposed change | 2026-10-28 · AI-016 · (1) **CI:** GitHub Actions, `.github/workflows/ci.yml`, on every push and every pull request, no path filters. (2) **Python 3.14** (`requires-python = ">=3.14,<3.15"`, `.python-version`). (3) **uv** with a committed `uv.lock`; the project is not packaged (`tool.uv.package = false`). (4) **Tools:** Ruff (lint and format), mypy strict with an explicit `files` scope, pytest and pytest-cov. PyMySQL and redis-py are test-only (`test` dependency group); production DB and Redis clients are chosen by AI-011 / AI-013. (5) **Tests:** `tests/unit/`, `tests/integration/`, `tests/support/` at the root; the production package layout (OQ-8) stays with AI-011. (6) **Services in CI:** `mysql:8.4` (CT-17) and `redis:7.4`, the latter **provisional** until the Backend Team confirms its Redis version. (7) **Secret scan:** Gitleaks CLI 8.30.1, pinned and checksum-verified (not the separately licensed Gitleaks Action), over the full fetched history; one narrow allowlist for false positives, each entry justified in the AI-016 status record; GitHub secret scanning and push protection to be enabled by a repository admin. (8) **Coverage:** measured and reported, **no threshold** until AI-008 / DEC-30 agrees the figure. (9) **Required check:** the aggregate job `ci-ok`, to be required by branch protection on `develop`, `main` and `release` (PR required, branch up to date, no bypass), applied by a repository admin · Reason: AI-016 needs a CI provider and tooling, and AI-010 left OQ-1 open · Evidence: `docs/tasks/status/AI-016.md` (Python 3.14 compatibility check, local and Linux-container runs) · Impact: every AI task's local setup and CI; Backend (Redis version) · Awaiting: AI Team owner |
+| Approval | None yet as the team decision. The repository user (Git user `mostafa`) approved these choices for the AI-016 implementation on 2026-10-28. |
+
+**Follow-ups (open):**
+
+- The Backend Team confirms the Redis version; until then `redis:7.4` is provisional.
+- A repository admin enables branch protection with `ci-ok` required and GitHub secret scanning with push protection; both are verified afterwards and recorded in the AI-016 status record.
+- AI-008 / DEC-30 supplies the coverage figure, which becomes `fail_under` in `pyproject.toml`.
+
+### AI-014 · Unit, datum and time utilities
+
+| | |
+| --- | --- |
+| Source | AI-014 (backlog: "Reject unknown units; never guess") · `ATLANTECH_AI_ARCHITECTURE.md` §7.2, §7.3, §13.1 · `ClassDiagramContext.md` (`SpeedUnit`, `VisibilityUnit`, `ConstraintUnit`, `PortShift`, `PortProfile.timezone`) · AI-010 follow-up OQ-8 (package layout) · DEC-27 (datum, Open) |
+| Owner | AI Team |
+| Status | Proposed |
+| Affects | AI-020 · AI-021 · AI-025 · AI-044 and every later worker using `common` · AI-011 (OQ-8) |
+| Decision | ______ |
+| Proposed change | 2026-10-29 · AI-014 · (1) **Layout:** `common/__init__.py`, `common/units.py`, `common/time.py`, `common/datum.py`, imported as `common.units` / `common.time` / `common.datum`; tests in `tests/unit/common/`; the final package layout is left to AI-011 (OQ-8). `common/time.py` shares the stdlib `time` name: safe with absolute imports, and no script is ever run from inside `common/`. (2) **Time-zone data:** `tzdata` is an unconditional runtime dependency (`tzdata>=2026.6`, locked in `uv.lock`), so every platform uses the same IANA database version; zones come only from `zoneinfo.ZoneInfo`, with no OS fallback. (3) **Datum:** consistency check only; `MissingDatumError` for a missing or empty value, `DatumMismatchError` unless the tide set's `datum_reference`, the channel's `depth_datum` and the berth's `depth_datum` are exactly equal (no normalisation); no conversion between datums, which depends on DEC-27. (4) **DST:** a local time in a spring-forward gap raises `NonExistentLocalTimeError`, one in a fall-back overlap `AmbiguousLocalTimeError` (both `LocalTimeError`); no fold or earlier/later option, and any such option needs its own decision · Reason: AI-014 must convert units and times in one place and never guess (backlog guidance) · Evidence: `docs/tasks/status/AI-014.md`, tests in `tests/unit/common/` · Impact: AI-020, AI-021, AI-025, AI-044 and every later worker using `common`; AI-011 (OQ-8) · Awaiting: AI Team owner |
+| Approval | None yet as the team decision. The repository user approved these choices for the AI-014 implementation on 2026-10-29. |
+
+### AI-003 · AIBD-032 and AIBD-036 outcome for contract v1
+
+| | |
+| --- | --- |
+| Source | AI-003 (backlog: "Every AIBD contract marked PROPOSED is either approved or explicitly rejected") · AIBD §2.1 AIBD-032 and AIBD-036, as supplied by the AI lead on 2026-11-03 (`ATLANTECH_AI_BACKEND_DEPENDENCIES.md` is not in the repository) · CT-16 · CT-18 · AI-090 · AI-009 |
+| Owner | AI Team |
+| Status | Closed |
+| Affects | AI-003 · AI-009 · AI-090 |
+| Decision | (1) **AIBD-032** is rejected as a contract v1 item. Health visibility is covered by CT-16 (Approved). The supervision tool is a deployment choice, left to AI-090. (2) **AIBD-036:** CT-18 v1.0, approved on 2026-10-27, defines the seed shape and scope, and that counts as approval for contract v1. The seed content is AI-009's deliverable and stays tracked there. |
+| Approval | Decided by MennaGamal-87 (AI lead), 2026-11-03. Item (2) rests on the existing CT-18 approval by the Backend Team. |
+
+**Follow-ups (they don't reopen the decision):**
+
+- AI-090 chooses the supervisor tool. The AI lead cites implementation plan §7, "supervisor tool chosen in AI-090"; that plan is not in this repository.
+- AI-009 delivers the seed content and the ⟨AI⟩ values in CT-18. This decision doesn't make AI-009 done.
+### AI-012 · Configuration management
+
+| | |
+| --- | --- |
+| Source | AI-012 (backlog) · DEC-12 · DEC-08 · CT-18 §4 and §7 · CT-08 §7 · `ATLANTECH_AI_ARCHITECTURE.md` (secrets live in environment configuration) · AIBD §6.1 as quoted by the user on 2026-11-03 (`ATLANTECH_AI_BACKEND_DEPENDENCIES.md` is not in the repository, so the names were not checked against it) |
+| Owner | AI Team |
+| Status | Proposed |
+| Affects | AI-011 · AI-013 · AI-020 and every worker · Backend Team (deployment environment, BOOL text) |
+| Decision | ______ |
+| Proposed change | 2026-11-03 · AI-012 · (1) **Layout:** `common/config.py`, imported as `common.config`; final package layout left to AI-011 (OQ-8). (2) **Environment names:** `AI_DB_HOST`, `AI_DB_USER_<PART>`, `AI_REDIS_URL`, `AI_PROVIDER_PRIMARY_KEY`, `AI_PROVIDER_SECONDARY_KEY`, `AI_ARTIFACT_DIR`, `AI_BAPLIE_VOLUME` (AIBD §6.1), plus `AI_DB_PASSWORD_<PART>`, `AI_DB_PORT` and `AI_DB_NAME`. `<PART>` is `PART1`, `PART2`, `YARD`, `EDI`, `VALIDATE` or `PART3`, one per DEC-08 account. CI maps its existing `MYSQL_*` and `REDIS_URL` values to these names without renaming them. (3) **Missing configuration:** a missing database or Redis variable stops the worker at startup. The startup check covers only keys the worker uses that have an approved value in CT-18 today; ⟨AI⟩ keys are read when a job needs them, and a problem during a job fails that job with `CONFIGURATION_ERROR` (CT-08 §7, CT-18 §4). (4) **Refresh rule:** per job, no cache (DEC-12), on an autocommit connection, or committing or rolling back after every read. (5) **BOOL text:** exactly `1`, `0`, `true`, `false`; anything else is an error. (6) **DECIMAL:** parsed with `Decimal`, never `float`. · Reason: no contract names the environment variables or the BOOL text, and backlog criterion 1 ("stops the worker") needs reconciling with CT-08 §7 and CT-18 §4 · Evidence: `common/config.py`, `tests/unit/common/test_config.py`, `tests/integration/test_port_settings.py` · Impact: AI-011, AI-013, AI-020 and every worker; Backend for (2) and (5) · Awaiting: AI Team owner; Backend Team to confirm the environment names and what Laravel writes for BOOL values |
+| Approval | None yet as the team decision. The repository user approved these choices for the AI-012 implementation on 2026-11-03. `AI_DB_PORT` and `AI_DB_NAME` were added by the implementer, not taken from AIBD §6.1, because a connection needs them and code holds no defaults; the user approved them the same day. All the names stay Proposed, awaiting Backend confirmation. |
+
+### AI-011 · Shared worker runtime
+
+| | |
+| --- | --- |
+| Source | AI-011 (backlog) · CT-08 §2, §6 and §7 · CT-10 · CT-11 · CT-12 · CT-14 · CT-15 · CT-17 · DEC-04 · DEC-08 · AI-010 follow-ups OQ-2 and OQ-8 |
+| Owner | AI Team |
+| Status | Proposed |
+| Affects | AI-013 and every worker · AI-090 (schema files) · Backend Team (`AI_SCHEMA_DIR`, CT-08, CT-15, DEC-08, `chk_p1r_retry`) |
+| Decision | ______ |
+| Proposed change | 2026-11-03 · AI-011 · (1) **Layout (OQ-8):** `common/runtime/`, imported as `common.runtime.<module>`; no packaging; workers run as `python -m <module>` from the repository root. (2) **Connections:** the runtime takes a DB-API connection factory, in manual commit; AI-013 owns the driver and pool. (3) **Wrong queue:** a `job_type` that doesn't match the queue is logged at ERROR with `job_type`, `run_id` and queue, dropped and never claimed. This deviates from CT-08 §6 step 3; a `Proposed change` to CT-08 is on PortHub. A missing `job_type` isn't treated as a wrong queue. (4) **Retries:** immediate, no delay. (5) **Schemas (OQ-2):** loaded from `AI_SCHEMA_DIR`, Proposed like the AI-012 names. It defaults to `docs/ref/ai-payloads/` only inside a Git checkout (development and CI), with a warning. A missing schema stops the worker at startup. (6) **`part1_max_retries` above 3:** `CONFIGURATION_ERROR`, never clamped, until the Backend resolves it against `chk_p1r_retry`. (7) **`yard_runs.retry_count`:** used; a `Proposed change` to CT-15 and DEC-08 is on PortHub. (8) **Before settings are read:** a failed read gets one retry, since Part 1's limit isn't known yet. (9) **Logs:** an exception is logged as its type and traceback location, never its text. · Reason: no contract covers (1), (2), (4), (5), (8) and (9), and (3) and (6) handle gaps in the approved text · Evidence: `common/runtime/`, `tests/unit/common/runtime/`, `tests/integration/test_worker_runtime.py` · Impact: AI-013, AI-090 and every worker; Backend for (3), (5), (6) and (7) · Awaiting: AI Team owner; Backend Team for (3), (5), (6) and (7) |
+| Approval | None yet as the team decision. The repository user approved these choices for the AI-011 implementation on 2026-11-03, including `yard_runs.retry_count` for the AI Team. |
+
+**Follow-ups (they don't reopen the decision):**
+
+- Retry delay is undefined. If a provider needs one, it should come from `port_settings`.
+- AI-090 ships the schema files and sets `AI_SCHEMA_DIR`.
+- Where the yard and validation workers live in the module tree (AI-010 follow-up).
+
+### AI-013 · Data-access layer
+
+| | |
+| --- | --- |
+| Source | AI-013 (backlog) · CT-15 · CT-17 §2 and §6 · DEC-08 · AI-010 follow-up OQ-8 |
+| Owner | AI Team |
+| Status | Proposed |
+| Affects | Every worker · AI-015 · AI-090 (TLS, environment) · Backend Team (CT-17 test setup, environment names) |
+| Decision | ______ |
+| Proposed change | 2026-11-03 · AI-013 · (1) **Layout (OQ-8):** `common/db/`, imported as `common.db.<module>`. (2) **Driver:** SQLAlchemy Core, PyMySQL and `cryptography`, pinned in `uv.lock`. (3) **Connections:** `connect_worker` gives one transaction shared by the runtime's raw cursors and the repositories, with a pool of one and one overflow, and a pre-ping. (4) **Test setup, a deviation from CT-17 §6:** tests run on our own CI services, not the Backend's docker compose, from the full `schema.sql` with the six accounts created as `atlantech:worker-accounts` does, and without the CT-18 seed. (5) **Schema copy:** `docs/ref/db/schema.sql`, byte-exact, with its source commit and SHA-256 in `schema.sql.source.json`, checked offline. (6) The backlog's "PortSync.md DDL" is read as `contracts/db/schema.sql`. (7) **Initial status of `recommendations`:** workers insert only `PENDING_REVIEW`. CT-15 names no status; evidence: DEC-06 and CT-10 ("Only the previous PENDING_REVIEW version of a solved request becomes REPLACED"), the CT-20 example and the schema default. (8) **Datetimes:** a value with an offset is converted to UTC; one without is taken as UTC; workers create only aware values, with `datetime.now(UTC)`. Reason: the task needs these, and CT-17 §6's setup isn't usable from this repository's CI. Evidence: `common/db/`, `tests/integration/test_worker_accounts.py`, `tests/integration/test_db_layer.py`, `tests/integration/test_runtime_real_accounts.py`. Impact: AI-015 and every worker; Backend for points 4 and 7. Awaiting: AI Team; Backend Team for points 4 and 7 |
+| Approval | None yet as the team decision. The repository user approved these choices for the AI-013 implementation on 2026-11-03 and 2026-11-04. MennaGamal-87 (AI lead) approved on 2026-11-04 counting the privilege matrix as Backend-approved, because it is generated from Backend's `workers.sql` and CT-15 is approved by Backend; `yard_runs.retry_count` stays pending its PortHub Proposed change. |
+
+**Follow-ups (they don't reopen the decision):**
+
+- CT-15 writes the worker's `lifecycle_status` value as `GENERATED`; the ENUM and CT-11 use `YARD_REC_GENERATED`. The code follows the ENUM. CT-15's wording should be corrected.
+- **Deployment risk for AI-090:** workers and MySQL share the port server, so TLS may be off there. PyMySQL 1.2.3 uses TLS by default, without checking the certificate. Without TLS, its first `caching_sha2_password` login crashes, even with `cryptography` installed. Backend question: does production/prototype MySQL offer TLS to the worker accounts? If not, it must be fixed before deployment.
+- `database/grants/workers.sql` on backend `develop` has a stray `-- DEMO (do not merge)` comment that isn't in `schema.sql`.
