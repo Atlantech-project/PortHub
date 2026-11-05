@@ -42,7 +42,7 @@ This file lists every decision that must be closed before implementation, every 
 | DEC-22 | Financial-impact data in ranking | AI Team | Open | Sprint 4 |
 | DEC-23 | Objective terms, weights and number of options | AI Team | Closed | Sprint 1 |
 | DEC-24 | Part 1 settings: horizon, time step, minimum window, slot | AI Team | Open | Sprint 4 |
-| DEC-25 | Uncertainty margin and window confidence | AI Team | Open | Sprint 3 |
+| DEC-25 | Uncertainty margin and window confidence | AI Team | Closed | Sprint 3 |
 | DEC-26 | Weather and marine providers | AI Team | Open | Sprint 4 |
 | DEC-27 | Tidal constants source, datum and reference | AI Team | Open | Sprint 4 |
 | DEC-28 | Definition of moves | AI Team | Open | Sprint 3 |
@@ -887,10 +887,12 @@ Weekday and month are not inputs: the weekday effect is small (Sunday ≈ 7 % lo
 | --- | --- |
 | Source | OD-11 |
 | Owner | AI Team |
-| Status | Open |
+| Status | Closed |
 | Closing task | DEC-25 · Sprint 3 |
 | Affects | AI-044 · AI-048 |
-| Decision | ______ |
+| Decision | Closed (2026-11-05): Option 1. The MVP applies no uncertainty margin: A4 checks forecast values against the `safety_constraints` thresholds as they are, and every window's confidence (`feasible_windows.confidence`) is written as NULL. A6 stays out of scope (AI-001). Full text in "Decision detail" below. |
+| Agreed with | Mostafa Mohamed Rashwan, Leads Council, 2026-11-05. Decided by the Leads Council; the AI Team (owner) is informed. |
+| Implementation | `project-ai` AI-044 (no margin term in the threshold check) and AI-048 (window confidence written as NULL) (not yet implemented). |
 
 <div dir="rtl">
 
@@ -905,6 +907,26 @@ Weekday and month are not inputs: the weekday effect is small (Sunday ≈ 7 % lo
 1. Zero margin and confidence = NULL.
 
 **Recommendation.** This option. P-37 shows no confidence value.
+
+**Decision detail.** Option 1, recorded as already settled by AI-001 (Closed), which lists A6 as out of scope and states that the MVP uses zero margin and `confidence` = NULL.
+
+1. **No margin.** A6 is future work, so there is no model to compute a margin. A4 compares forecast values directly with the `safety_constraints` thresholds.
+2. **Safety rests on the thresholds.** With zero margin, the `safety_constraints` defaults must be conservative. A separate fixed margin in `port_settings` is not added: it would duplicate tightening the thresholds, which the Marine Safety Officer owns (DEC-30 TR-10), and give two sources for the same safety limit.
+3. **Confidence NULL means "not assessed".** It is never stored or shown as 0 % or 100 %.
+4. **Not the DEC-21 headroom.** DEC-21 uses headroom to the safety limits for the delay-risk level only. That is not an A6 margin and does not change any window.
+
+**Open items (follow-ups; they don't reopen the decision):**
+
+1. Frontend: P-37 shows no confidence value; when it is NULL the field is hidden, never shown as "0%".
+2. When the Marine Safety Officer provides the TR-10 values (DEC-30, CT-25), he is told that no margin is added on top of them, so the values must already be conservative.
+3. Building A6 later needs a new decision; it does not reopen this one.
+
+**References:**
+
+- AI-001 · AI scope and component inventory (this file): A6 out of scope, zero margin, `confidence` NULL.
+- DEC-30 TR-10 (`safety_constraints` defaults) and TR-22 (this decision).
+- DEC-21 (delay-risk headroom, separate from A6).
+- Schema: `contracts/db/schema.sql` in PortHub and `docs/ref/db/schema.sql` in project-ai (same lines), lines 686–697 (`feasible_windows.confidence`, line 691, `decimal(4,3) DEFAULT NULL`, nullable; `chk_fw_values` on line 696 allows NULL).
 
 ### DEC-26 · Weather and marine providers
 
@@ -1068,7 +1090,7 @@ Weekday and month are not inputs: the weekday effect is small (Sunday ≈ 7 % lo
 | TR-19 | Evaluation key question (not a threshold) | REFERENCE | — | Master_Context §4 (Port Authority daily bulletin): whether the port can handle more than about 26 vessels a day, assessed experimentally, not a pass/fail limit | AI Team | AI-084 |
 | TR-20 | Deviation significance per operation type (UML AD-16 D1) | REFERENCE | — | DEC-09 (Open, Sprint 6); a Port Admin setting | Backend Team | — |
 | TR-21 | Part 1 horizon, time step, minimum window, demand slot, gap tolerance | REFERENCE | — | DEC-24 (Open) | AI Team | — |
-| TR-22 | Uncertainty margin and window confidence | REFERENCE | — | DEC-25 (Open; the MVP uses zero margin and `confidence` NULL) | AI Team | — |
+| TR-22 | Uncertainty margin and window confidence | REFERENCE | — | DEC-25 (Closed 2026-11-05; the MVP uses zero margin and `confidence` NULL) | AI Team | — |
 | TR-23 | Tug count per vessel | REFERENCE | — | DEC-20 (Closed, interim tables) | AI Team | — |
 | TR-24 | `run_stale_after_seconds` | REFERENCE | — | CT-18 §4 and §7 (the AI Team supplies it with its calculation) | AI Team | — |
 | TR-25 | Clock-skew suspect rule | REFERENCE | — | `ClassDiagramContext.md` OI-06 | Backend Team | — |
@@ -1779,6 +1801,7 @@ Decisions that belong to one AI backlog task and have no `DEC-` ID. Each is keye
 | AI-012 | Configuration management | AI Team | Proposed |
 | AI-011 | Shared worker runtime | AI Team | Proposed |
 | AI-013 | Data-access layer | AI Team | Proposed |
+| AI-015 | Test harness and scenario generator | AI Team | Proposed |
 
 ### AI-001 · AI scope and component inventory
 
@@ -1794,7 +1817,7 @@ Decisions that belong to one AI backlog task and have no `DEC-` ID. Each is keye
 **Follow-ups (they don't reopen the decision):**
 
 - The supplied record's decision date is blank; add it if the AI Lead or Team Lead provides it.
-- The methods behind several components are still open: DEC-21 (B4 rule), DEC-25 (A6 and confidence), DEC-29 (B8 method), DEC-31 (Part 3 host).
+- DEC-21 (B4 rule) and DEC-25 (A6 and confidence) are Closed (2026-11-05). Still open: DEC-29 (B8 method), DEC-31 (Part 3 host).
 - `Master_Context.md` §6.4 calls C3/C4 "future work", while this decision and Architecture §9.5 call them data-gated. The owner of `Master_Context.md` should align its wording.
 
 ### AI-010 · AI code repository location and module structure
@@ -1906,3 +1929,20 @@ Decisions that belong to one AI backlog task and have no `DEC-` ID. Each is keye
 - CT-15 writes the worker's `lifecycle_status` value as `GENERATED`; the ENUM and CT-11 use `YARD_REC_GENERATED`. The code follows the ENUM. CT-15's wording should be corrected.
 - **Deployment risk for AI-090:** workers and MySQL share the port server, so TLS may be off there. PyMySQL 1.2.3 uses TLS by default, without checking the certificate. Without TLS, its first `caching_sha2_password` login crashes, even with `cryptography` installed. Backend question: does production/prototype MySQL offer TLS to the worker accounts? If not, it must be fixed before deployment.
 - `database/grants/workers.sql` on backend `develop` has a stray `-- DEMO (do not merge)` comment that isn't in `schema.sql`.
+
+### AI-015 · Test harness and synthetic scenario generator
+
+| | |
+| --- | --- |
+| Source | AI-015 (backlog: "Never present results on synthetic data as operational performance"; "Distribution choices are assumptions; document them") · `Master_Context.md` §4 · NFR-CAP-1 (`UML_Context.md`) · AI-010 follow-up OQ-7 (locations for tests and tools) · AI-013 follow-up (real seed data with parent rows) |
+| Owner | AI Team |
+| Status | Proposed |
+| Affects | AI-022 · AI-061 · AI-062 and every later test that needs master data |
+| Decision | ______ |
+| Proposed change | 2026-11-05 · AI-015 · (1) **Locations (OQ-7):** `tools/scenario_generator/` (generator, command line `python -m tools.scenario_generator`), `tests/fixtures/` (sample scenarios and the seed register `scenario_seeds.json`), `tests/support/scenarios.py` (fixture loader). (2) **Format:** one JSON file per scenario, `SYNTHETIC_<size>_seed<N>.json`, with a `metadata` block (`synthetic: true`, `label`, `size`, `seed`, `days`, `generator_version`, `start_date`, `counts`, `assumptions`) and rows per table in insert order. (3) **Label rule:** every file name starts with `SYNTHETIC_`, every name inside the data starts with "SYNTHETIC" (the generator does this and a test checks it), and the loader refuses a file or scenario whose file name or metadata isn't labelled. The port has no UN/LOCODE, sits at latitude 0, longitude 0, and IMO numbers carry a deliberately wrong check digit, so no real port or ship can be meant. (4) **Reproducibility:** one `random.Random(seed)`, a fixed start date (2026-01-05 UTC) and no wall clock; the samples are compared byte for byte with a fresh run. (5) **Loading:** with foreign key checks on, in one transaction, into the schema copy `docs/ref/db/schema.sql`. (6) **Assumptions:** the distribution choices are listed in `tools/scenario_generator/README.md` and in each file's metadata. They are assumptions, not Damietta data. (7) **Scope:** master data for the port, terminals, berths, channel, tugboats, vessels and berthing requests only; users, tides, weather, pilots, containers and BAPLIE data are not generated · Reason: the backlog asks for repeatable scenarios before real data exists, and no document fixes the file format or locations · Evidence: `tools/scenario_generator/`, `tests/unit/tools/`, `tests/integration/test_scenario_load.py`, `docs/tasks/status/AI-015.md` · Impact: AI-022, AI-061, AI-062 · Awaiting: AI Team owner |
+| Approval | None yet as the team decision. Mostafa Rashwan (Lead Council) approved the AI-015 task and its PROPOSED justification on 2026-11-05, and the implementation plan the same day. |
+
+**Follow-ups (they don't reopen the decision):**
+
+- The schema copy is at PortHub `b4d2deb`. A Backend migration adds `port_settings.min_value` and `port_settings.max_value`; the generator writes no `port_settings` rows, so it is not affected, but the copy needs refreshing when PortHub regenerates `schema.sql`.
+- AI-022 supplies real reference-port master data; this generator doesn't replace it.
