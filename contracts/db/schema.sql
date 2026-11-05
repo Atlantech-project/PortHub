@@ -2622,5 +2622,3 @@ GRANT SELECT (`id`, `name`, `is_active`) ON `users` TO 'r_part3';
 GRANT SELECT (`mode`, `read_only_reason`) ON `license_states` TO 'r_part3';
 GRANT INSERT ON `evaluation_metrics` TO 'r_part3';
 GRANT INSERT ON `drift_measurements` TO 'r_part3';
-
--- DEMO (do not merge): shows the ai-impact label and the AI lead review request. No grant changes.

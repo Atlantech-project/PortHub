@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.5.0'
+  version: '1.6.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -169,7 +169,9 @@ paths:
       description: >-
         Saves the new password, clears `must_change_password` and starts a new session id. While the flag is set, every
         signed-in route except this one, `auth/me` and logout answers 403 PASSWORD_CHANGE_REQUIRED. The new password
-        has at least 8 characters with letters and numbers, and differs from the current one. Throttled at 5 requests
+        has at least 8 characters with letters and numbers, and differs from the current one. The user's other sessions close, as on the web: the other web sessions end by themselves, and every other
+        mobile token of the user is revoked (`revoked_at` is set, the rows stay). The token or session that made the
+        change stays valid. Throttled at 5 requests
         per minute per user.
       security:
         - cookieAuth: []
@@ -346,8 +348,9 @@ components:
       type: http
       scheme: bearer
       description: >-
-        Mobile app: personal access token (CT-04). Requests also send `X-App-Version` and `X-Device-Id`;
-        writes send `Idempotency-Key`.
+        Mobile app: personal access token (CT-04). A Bearer request must send `X-App-Version` (`x.y.z`) and `X-Device-Id`:
+        either one missing or malformed is 422 VALIDATION_FAILED, another device or a revoked one is 401, and a version
+        older than `min_app_version` is 426. Web requests (session cookie) may omit `X-App-Version`. Writes send `Idempotency-Key`.
   parameters:
     Page:
       name: page
@@ -380,7 +383,9 @@ components:
       name: X-App-Version
       in: header
       required: true
-      description: Mobile app version; older than the port's minimum gives 426 APP_UPDATE_REQUIRED.
+      description: >-
+        Mobile app version, `x.y.z`. Required on mobile sign-in and on every Bearer request (missing or malformed is 422);
+        older than the port's minimum gives 426 APP_UPDATE_REQUIRED. A web request (session cookie) may omit it.
       schema:
         type: string
         example: '2.4.0'
