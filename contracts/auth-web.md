@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.0 |
+| Version | v1.1 |
 | Status | Approved |
 | Approved by | Marwan (Backend lead), 2026-10-31, without team review |
 | Owner | Backend Team |
@@ -62,6 +62,8 @@ While `must_change_password` is `true`, every signed-in route answers 403 `PASSW
 
 The new password has at least 8 characters with letters and numbers, and differs from the current one. A refused value returns 422 `VALIDATION_FAILED`, with keys such as `validation.current_password`, `validation.confirmed`, `validation.different` and `validation.password` under `errors`. The route allows 5 requests per minute per user, then 429.
 
+**Other sessions.** A password change closes the user's other sessions, on the web and on mobile (decision D-A, Marwan, 2026-11-05). The other web sessions end by themselves: their next request is 401, because the password hash changed (Sanctum `AuthenticateSession`). Every other mobile token of the user is revoked (`revoked_at` is set, the rows stay), so the tablets get 401 on their next request and must sign in again (CT-04). The session or token that made the change stays valid, whether the change came from the web or from a tablet.
+
 ## Deactivated user
 
 A deactivated user cannot sign in, and on the next request of an open session gets 403 `ACCOUNT_DISABLED` and is signed out. The request after that is 401.
@@ -81,4 +83,5 @@ A deactivated user cannot sign in, and on the next request of an open session ge
 
 | Version | Date | Change |
 | --- | --- | --- |
+| v1.1 | 2026-11-06 | A password change closes the user's other web sessions and revokes their other mobile tokens; the current session or token stays (P1-C3 review, D-A). Corrects the earlier plan text that said other sessions stay open |
 | v1.0 | 2026-10-30 | First version, matching the code (P1-C1, P1-C2, web part of P1-C4) |

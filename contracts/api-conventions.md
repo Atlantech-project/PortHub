@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.3 |
+| Version | v1.4 |
 | Status | Approved |
 | Owner | Backend Team |
 | Reviewers | Frontend Team · Mobile Team, critical changes only ([README](README.md)) |
@@ -32,7 +32,7 @@ These rules apply to every endpoint of the port API under `/api/v1`. The endpoin
 | Web | Session cookie (Sanctum SPA) | Every request |
 | Web | `X-XSRF-TOKEN`: the value of the `XSRF-TOKEN` cookie | Every write |
 | Mobile | `Authorization: Bearer <token>` | Every signed-in request |
-| Mobile | `X-App-Version` | Every request |
+| Mobile | `X-App-Version` | Every request. A Bearer request without it, or with a value that is not `x.y.z`, is 422 `VALIDATION_FAILED`; a version older than the port's minimum is 426. A web request (session cookie) may omit it |
 | Mobile | `X-Device-Id` | Every request |
 | Mobile | `Idempotency-Key` | Every write (section 4) |
 
@@ -329,6 +329,7 @@ Response header: `Retry-After: 60`
 
 | Version | Date | Change |
 | --- | --- | --- |
+| v1.4 | 2026-11-06 | `X-App-Version` is required on every Bearer request: missing or malformed is 422, older than the minimum is 426; web requests may omit it (P1-C3 review, D-B) |
 | v1.3 | 2026-10-31 | Mobile sign-in and channel authorisation do not use `Idempotency-Key` (CT-04, CT-06) |
 | v1.2 | 2026-10-30 | 429 also covers password-change throttling (P1-C2) |
 | v1.1 | 2026-10-30 | Review rule: Frontend and Mobile review critical changes only; QA tests and does not review |

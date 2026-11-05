@@ -154,7 +154,7 @@ The sign-in identifier is `username` (DEC-35, closed); users have no email.
 | Between | Backend → Mobile |
 | Owner | Backend Team |
 | Reviewers | Mobile Team |
-| Status | Approved v1.1 · 2026-10-31 by Marwan (Backend lead); v1.1 agreed with the Mobile Team (DEC-58) |
+| Status | Proposed v1.2 (DEC-60), waiting for Mobile Team approval · Approved v1.1 · 2026-10-31 by Marwan (Backend lead); v1.1 agreed with the Mobile Team (DEC-58) |
 | Output | This section. The paths go into `port-api.yaml` when P1-C3 and P1-C5 build them (CT-02) |
 
 **System info.** `GET /api/v1/system/info` needs no sign-in and is never refused with 426, because the app reads `min_app_version` from it. The app also uses it as the connectivity check at the start of a sync cycle (FR-MB-03), so there is no `GET /system/ping` (DEC-58).
@@ -200,10 +200,18 @@ The sign-in identifier is `username` (DEC-35, closed); users have no email.
 ```
 
 - `platform` is `ANDROID` or `IOS`.
-- Refusals: 401 `UNAUTHENTICATED` · 403 `ACCOUNT_DISABLED` · 422 `VALIDATION_FAILED`, also for a missing device header · 426 · 429 `TOO_MANY_ATTEMPTS`. 426 is checked before the password, and gives no token (FR-AC-05).
+- Refusals: 401 `UNAUTHENTICATED` · 403 `ACCOUNT_DISABLED` · 403 `DEVICE_REVOKED` (a device the Port Admin revoked, audited, no token; DEC-60) · 422 `VALIDATION_FAILED`, also for a missing device header · 426 · 429 `TOO_MANY_ATTEMPTS`. 426 is checked before the password, and gives no token (FR-AC-05).
 - **Token:** opaque, stored by Sanctum in `personal_access_tokens` and tied to one `user_devices` row. Each use extends it to 30 days from that use (FR-AC-06), and `expires_at` is the value at sign-in. P1-C3 adds the table to CT-17.
-- **Forced password change:** the CT-03 rules and `POST /api/v1/auth/change-password` apply, with the Bearer token.
+- **Forced password change:** the CT-03 rules and `POST /api/v1/auth/change-password` apply, with the Bearer token. A password change also revokes the user's other mobile tokens (they get 401 and sign in again); the token of the request that made the change stays (CT-03, v1.2).
 - **Logout:** `POST /api/v1/auth/logout` with the Bearer token returns 204 and sets `revoked_at` (FR-AC-08). A revoked token gets 401.
+- **Bearer requests.** Every request with the token sends `X-App-Version` and `X-Device-Id` (CT-01 section 3): a missing or malformed one is 422, another device is 401, a version below the minimum is 426. A token whose device was revoked is revoked on its next use and gets 401 `UNAUTHENTICATED`.
+
+**Change log.**
+
+| Version | Date | Change |
+| --- | --- | --- |
+| v1.2 | 2026-11-06 | Proposed: sign-in from a revoked device is refused with 403 `DEVICE_REVOKED` (DEC-60); Bearer requests must send `X-App-Version` (422); a password change revokes the other mobile tokens (P1-C3 review) |
+| v1.1 | 2026-10-31 | System info is the connectivity check, no `GET /system/ping` (DEC-58) |
 
 ---
 
