@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.2.0'
+  version: '1.5.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -25,9 +25,13 @@ servers:
     description: The port server; paths carry the full /api/v1 prefix.
 tags:
   - name: Auth
-    description: Web sign-in with the Sanctum SPA session (CT-03). First call `GET /sanctum/csrf-cookie`.
+    description: >-
+      Web sign-in with the Sanctum SPA session (CT-03; first call `GET /sanctum/csrf-cookie`), and mobile sign-in with a
+      device token (CT-04). Signed-in routes take either the session cookie or `Authorization: Bearer`.
   - name: Audit
     description: Audit log browsing for the Port Admin (FR-MD-16).
+  - name: System
+    description: Public port information for the mobile app (CT-04).
 paths:
   /api/v1/auth/login:
     post:
@@ -70,6 +74,66 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '429':
           $ref: '#/components/responses/TooManyAttempts'
+  /api/v1/auth/mobile/login:
+    post:
+      tags: [Auth]
+      operationId: authMobileLogin
+      summary: Mobile sign-in
+      description: >-
+        Signs a field user in from the tablet and returns an opaque device token (CT-04). Checked in this order: the
+        `X-App-Version` (`x.y.z`) and `X-Device-Id` headers (422), the app version against `min_app_version` (426, no
+        token), the body (422), then the credentials exactly as the web sign-in (429, 401, 403 ACCOUNT_DISABLED). A
+        device the Port Admin revoked answers 403 DEVICE_REVOKED. The device row is created or updated, an older token of
+        the same device is revoked, and the new token is named with the device id. Each use moves `expires_at` to 30 days
+        later; an expired or revoked token answers 401. No `Idempotency-Key`: a token is never replayed.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/AppVersion'
+        - $ref: '#/components/parameters/DeviceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileLoginRequest'
+      responses:
+        '200':
+          description: 'Signed in; send the token as `Authorization: Bearer` with `X-App-Version` and `X-Device-Id`.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileSignIn'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: '403 ACCOUNT_DISABLED, or 403 DEVICE_REVOKED for a device the Port Admin revoked.'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                accountDisabled:
+                  value:
+                    type: https://atlantech.io/errors/account-disabled
+                    title: 'Account disabled'
+                    status: 403
+                    code: ACCOUNT_DISABLED
+                    message_key: errors.account_disabled
+                    detail: 'Your account has been disabled. Contact your port administrator.'
+                deviceRevoked:
+                  value:
+                    type: https://atlantech.io/errors/device-revoked
+                    title: 'Device revoked'
+                    status: 403
+                    code: DEVICE_REVOKED
+                    message_key: errors.device_revoked
+                    detail: 'This device has been revoked by your port administrator. Contact your port administrator to use it again.'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/auth/me:
     get:
       tags: [Auth]
@@ -81,6 +145,7 @@ paths:
         deactivated user gets 403 and is signed out.
       security:
         - cookieAuth: []
+        - bearerAuth: []
       responses:
         '200':
           description: The signed-in user.
@@ -92,6 +157,10 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/AccountDisabled'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/auth/change-password:
     post:
       tags: [Auth]
@@ -104,6 +173,7 @@ paths:
         per minute per user.
       security:
         - cookieAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/XsrfToken'
       requestBody:
@@ -129,15 +199,20 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '429':
           $ref: '#/components/responses/TooManyAttempts'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/auth/logout:
     post:
       tags: [Auth]
       operationId: authLogout
-      summary: Web sign-out
+      summary: Sign out
       description: >-
-        Ends the web session. It stays open while `must_change_password` is set. The next signed-in request is 401.
+        Web: ends the session. Mobile: revokes the Bearer token the request carries (`revoked_at` is set, the row stays);
+        the user's other devices keep their tokens (CT-04). It stays open while `must_change_password` is set. The next
+        signed-in request with the same session or token is 401.
       security:
         - cookieAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/XsrfToken'
       responses:
@@ -149,6 +224,10 @@ paths:
           $ref: '#/components/responses/AccountDisabled'
         '419':
           $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/audit-logs:
     get:
       tags: [Audit]
@@ -161,6 +240,7 @@ paths:
         `action` REJECTED_ATTEMPT; `actor` is null for the system or a worker. A read, so it is allowed in every licence mode.
       security:
         - cookieAuth: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PerPage'
@@ -231,6 +311,28 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/system/info:
+    get:
+      tags: [System]
+      operationId: systemInfo
+      summary: Port and minimum app version
+      description: >-
+        Public: needs no sign-in, and is never refused with 426, because the app reads `min_app_version` here (CT-04).
+        The app calls it on first launch and as the connectivity check at the start of a sync cycle (DEC-58).
+        Until the licence work (DEC-54), `license_mode` is always `FULL` and `token_warning_days_left` is always null.
+        503 while the port is not provisioned yet (no port profile or no `min_app_version` setting).
+      security: []
+      responses:
+        '200':
+          description: The port this server belongs to.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemInfo'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 components:
   securitySchemes:
     cookieAuth:
@@ -347,6 +449,7 @@ components:
         - METHOD_NOT_ALLOWED
         - ACCOUNT_DISABLED
         - PASSWORD_CHANGE_REQUIRED
+        - DEVICE_REVOKED
         - APP_UPDATE_REQUIRED
         - LICENSE_READ_ONLY
         - PLAN_LIMIT_EXCEEDED
@@ -444,6 +547,72 @@ components:
           type: string
           maxLength: 255
           format: password
+    MobileLoginRequest:
+      type: object
+      required: [username, password, platform]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: Trimmed and lowercased by the server before it is checked.
+          example: pilot.k
+        password:
+          type: string
+          maxLength: 255
+          format: password
+        platform:
+          type: string
+          enum: [ANDROID, IOS]
+          example: ANDROID
+    MobileSignIn:
+      type: object
+      description: The mobile sign-in answer (CT-04).
+      required: [token, expires_at, user]
+      properties:
+        token:
+          type: string
+          description: Opaque device token.
+          example: 12|Hk3s9QxV0pLw2mN8rT5yZb7cD1fG4jK6aE0uI3oP9s2a5b8c
+        expires_at:
+          type: string
+          format: date-time
+          description: The expiry at sign-in; each use moves it to 30 days later.
+          example: '2026-12-02T10:00:00.000000Z'
+        user:
+          $ref: '#/components/schemas/UserProfile'
+    SystemInfo:
+      type: object
+      description: Public port information (CT-04 v1.1).
+      required: [port_id, port_code, port_name, license_mode, token_warning_days_left, min_app_version]
+      properties:
+        port_id:
+          type: string
+          format: uuid
+          description: '`port_profiles.public_id`.'
+          example: 0d9f6a52-7c1b-4b7e-9a3e-5a2f1c8d7e10
+        port_code:
+          type: string
+          nullable: true
+          description: UN/LOCODE; may be null.
+          example: EGDAM
+        port_name:
+          type: string
+          example: Damietta Port
+        license_mode:
+          type: string
+          enum: [SETUP, FULL, READ_ONLY]
+          description: Always `FULL` until the licence work (DEC-54).
+          example: FULL
+        token_warning_days_left:
+          type: integer
+          nullable: true
+          description: Always null until the licence work (DEC-54).
+          example: null
+        min_app_version:
+          type: string
+          description: The oldest mobile app version the port accepts (`x.y.z`); older apps get 426.
+          example: 1.0.0
     UserProfile:
       type: object
       description: The signed-in user (CT-03). One active role (DEC-36); `role` is null when the user has none.
@@ -630,6 +799,19 @@ components:
             code: ACCOUNT_DISABLED
             message_key: errors.account_disabled
             detail: 'Your account has been disabled. Contact your port administrator.'
+    DeviceRevoked:
+      description: '403 DEVICE_REVOKED'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://atlantech.io/errors/device-revoked
+            title: 'Device revoked'
+            status: 403
+            code: DEVICE_REVOKED
+            message_key: errors.device_revoked
+            detail: 'This device has been revoked by your port administrator. Contact your port administrator to use it again.'
     PasswordChangeRequired:
       description: '403 PASSWORD_CHANGE_REQUIRED'
       content:
