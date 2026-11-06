@@ -154,7 +154,7 @@ The sign-in identifier is `username` (DEC-35, closed); users have no email.
 | Between | Backend → Mobile |
 | Owner | Backend Team |
 | Reviewers | Mobile Team |
-| Status | Proposed v1.2 (DEC-60), waiting for Mobile Team approval · Approved v1.1 · 2026-10-31 by Marwan (Backend lead); v1.1 agreed with the Mobile Team (DEC-58) |
+| Status | Approved v1.2 · 2026-11-06 (DEC-60), approved by the Mobile Team in its reply to the Backend · Approved v1.1 · 2026-10-31 by Marwan (Backend lead); v1.1 agreed with the Mobile Team (DEC-58) |
 | Output | This section. The paths go into `port-api.yaml` when P1-C3 and P1-C5 build them (CT-02) |
 
 **System info.** `GET /api/v1/system/info` needs no sign-in and is never refused with 426, because the app reads `min_app_version` from it. The app also uses it as the connectivity check at the start of a sync cycle (FR-MB-03), so there is no `GET /system/ping` (DEC-58).
@@ -210,7 +210,7 @@ The sign-in identifier is `username` (DEC-35, closed); users have no email.
 
 | Version | Date | Change |
 | --- | --- | --- |
-| v1.2 | 2026-11-06 | Proposed: sign-in from a revoked device is refused with 403 `DEVICE_REVOKED` (DEC-60); Bearer requests must send `X-App-Version` (422); a password change revokes the other mobile tokens (P1-C3 review) |
+| v1.2 | 2026-11-06 | Approved by the Mobile Team (no objection to the three changes, 2026-11-06): sign-in from a revoked device is refused with 403 `DEVICE_REVOKED` (DEC-60); Bearer requests must send `X-App-Version` (422); a password change revokes the other mobile tokens (P1-C3 review) |
 | v1.1 | 2026-10-31 | System info is the connectivity check, no `GET /system/ping` (DEC-58) |
 
 ---
