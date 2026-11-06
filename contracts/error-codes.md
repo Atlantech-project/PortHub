@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.2 |
+| Version | v1.3 |
 | Status | Approved |
 | Owner | Backend Team |
 | Reviewers | Frontend Team · Mobile Team, critical changes only ([README](README.md)) |
@@ -26,6 +26,7 @@ A new code is added in the PR of the task that introduces it, with a minor versi
 | `UNAUTHENTICATED` | `errors.unauthenticated` | 401 | Not signed in, session ended, or wrong credentials | P1-A2 |
 | `FORBIDDEN` | `errors.forbidden` | 403 | Signed in, but the role or terminal scope does not allow this | P1-A2 |
 | `ACCOUNT_DISABLED` | `errors.account_disabled` | 403 | The account is deactivated | P1-A2 |
+| `DEVICE_REVOKED` | `errors.device_revoked` | 403 | Mobile sign-in from a device the Port Admin revoked; no token is issued (DEC-60) | P1-C3 |
 | `PASSWORD_CHANGE_REQUIRED` | `errors.password_change_required` | 403 | The user must change their password before anything else | P1-A2 |
 | `NOT_FOUND` | `errors.not_found` | 404 | The record or address does not exist | P1-A2 |
 | `METHOD_NOT_ALLOWED` | `errors.method_not_allowed` | 405 | Wrong method; the `Allow` header lists the valid ones | P1-A2 |
@@ -52,6 +53,7 @@ These are message keys, not codes. They give a more specific message under one o
 
 | Version | Date | Change |
 | --- | --- | --- |
+| v1.3 | 2026-11-06 | Added `DEVICE_REVOKED` 403, introduced by P1-C3 (DEC-60, CT-04 v1.2) |
 | v1.2 | 2026-10-30 | 429 also covers password-change throttling (P1-C2) |
 | v1.1 | 2026-10-30 | Review rule: Frontend and Mobile review critical changes only; QA tests and does not review |
 | v1.0 | 2026-10-30 | First version: 17 codes, matching `ErrorCode` on `develop` (P1-A2, P1-C1) |
