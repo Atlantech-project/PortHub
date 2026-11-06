@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.3 |
+| Version | v1.4 |
 | Status | Approved |
 | Owner | Backend Team |
 | Reviewers | Frontend Team · Mobile Team, critical changes only ([README](README.md)) |
@@ -33,7 +33,7 @@ A new code is added in the PR of the task that introduces it, with a minor versi
 | `VERSION_CONFLICT` | `errors.version_conflict` | 409 | The version token is stale; the body carries `current` | P1-A2 |
 | `SESSION_EXPIRED` | `errors.session_expired` | 419 | CSRF token missing or stale on a web request; fetch a new CSRF cookie and retry | P1-C1 |
 | `VALIDATION_FAILED` | `errors.validation_failed` | 422 | The data is not valid; the body carries `errors` | P1-A2 |
-| `IDEMPOTENCY_KEY_REUSED` | `errors.idempotency_key_reused` | 422 | The `Idempotency-Key` was already used with a different body | P1-A2 |
+| `IDEMPOTENCY_KEY_REUSED` | `errors.idempotency_key_reused` | 422 | The `Idempotency-Key` was already used with a different request (body, path or method) | P1-A2 |
 | `PLAN_LIMIT_EXCEEDED` | `errors.plan_limit_exceeded` | 422 | Reserved: the write would exceed a plan limit (DEC-54) | P1-A2 |
 | `LICENSE_READ_ONLY` | `errors.license_read_only` | 423 | Reserved: the licence is read-only, so writes are blocked (DEC-54) | P1-A2 |
 | `APP_UPDATE_REQUIRED` | `errors.app_update_required` | 426 | The mobile app is older than the port's minimum; the body carries `min_app_version` | P1-A2 |
@@ -53,6 +53,7 @@ These are message keys, not codes. They give a more specific message under one o
 
 | Version | Date | Change |
 | --- | --- | --- |
+| v1.4 | 2026-11-06 | `IDEMPOTENCY_KEY_REUSED` also covers another path or method under the same key (IDEMP-01); `SERVICE_UNAVAILABLE` also answers a request whose key is still running. Wording only, code, status and key unchanged |
 | v1.3 | 2026-11-06 | Added `DEVICE_REVOKED` 403, introduced by P1-C3 (DEC-60, CT-04 v1.2) |
 | v1.2 | 2026-10-30 | 429 also covers password-change throttling (P1-C2) |
 | v1.1 | 2026-10-30 | Review rule: Frontend and Mobile review critical changes only; QA tests and does not review |
