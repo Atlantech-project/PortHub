@@ -154,7 +154,7 @@ The sign-in identifier is `username` (DEC-35, closed); users have no email.
 | Between | Backend → Mobile |
 | Owner | Backend Team |
 | Reviewers | Mobile Team |
-| Status | Approved v1.1 · 2026-10-31 by Marwan (Backend lead); v1.1 agreed with the Mobile Team (DEC-58) |
+| Status | Proposed v1.2 (DEC-60), waiting for Mobile Team approval · Approved v1.1 · 2026-10-31 by Marwan (Backend lead); v1.1 agreed with the Mobile Team (DEC-58) |
 | Output | This section. The paths go into `port-api.yaml` when P1-C3 and P1-C5 build them (CT-02) |
 
 **System info.** `GET /api/v1/system/info` needs no sign-in and is never refused with 426, because the app reads `min_app_version` from it. The app also uses it as the connectivity check at the start of a sync cycle (FR-MB-03), so there is no `GET /system/ping` (DEC-58).
@@ -200,10 +200,18 @@ The sign-in identifier is `username` (DEC-35, closed); users have no email.
 ```
 
 - `platform` is `ANDROID` or `IOS`.
-- Refusals: 401 `UNAUTHENTICATED` · 403 `ACCOUNT_DISABLED` · 422 `VALIDATION_FAILED`, also for a missing device header · 426 · 429 `TOO_MANY_ATTEMPTS`. 426 is checked before the password, and gives no token (FR-AC-05).
+- Refusals: 401 `UNAUTHENTICATED` · 403 `ACCOUNT_DISABLED` · 403 `DEVICE_REVOKED` (a device the Port Admin revoked, audited, no token; DEC-60) · 422 `VALIDATION_FAILED`, also for a missing device header · 426 · 429 `TOO_MANY_ATTEMPTS`. 426 is checked before the password, and gives no token (FR-AC-05).
 - **Token:** opaque, stored by Sanctum in `personal_access_tokens` and tied to one `user_devices` row. Each use extends it to 30 days from that use (FR-AC-06), and `expires_at` is the value at sign-in. P1-C3 adds the table to CT-17.
-- **Forced password change:** the CT-03 rules and `POST /api/v1/auth/change-password` apply, with the Bearer token.
+- **Forced password change:** the CT-03 rules and `POST /api/v1/auth/change-password` apply, with the Bearer token. A password change also revokes the user's other mobile tokens (they get 401 and sign in again); the token of the request that made the change stays (CT-03, v1.2).
 - **Logout:** `POST /api/v1/auth/logout` with the Bearer token returns 204 and sets `revoked_at` (FR-AC-08). A revoked token gets 401.
+- **Bearer requests.** Every request with the token sends `X-App-Version` and `X-Device-Id` (CT-01 section 3): a missing or malformed one is 422, another device is 401, a version below the minimum is 426. A token whose device was revoked is revoked on its next use and gets 401 `UNAUTHENTICATED`.
+
+**Change log.**
+
+| Version | Date | Change |
+| --- | --- | --- |
+| v1.2 | 2026-11-06 | Proposed: sign-in from a revoked device is refused with 403 `DEVICE_REVOKED` (DEC-60); Bearer requests must send `X-App-Version` (422); a password change revokes the other mobile tokens (P1-C3 review) |
+| v1.1 | 2026-10-31 | System info is the connectivity check, no `GET /system/ping` (DEC-58) |
 
 ---
 
@@ -1161,7 +1169,7 @@ Workers treat an unknown ENUM value they read as a warning and skip the row; the
 | Owner | AI Team (`seed-spec.json`) · Backend Team (`reference-seed.json`, seeders) |
 | Reviewers | Backend Team · AI Team (codes it depends on) |
 | Output | `contracts/ai/seed-spec.json` · `contracts/db/reference-seed.json` |
-| Status | Approved v1.0 · 2026-10-27 (DEC-12 · DEC-23). Values marked ⟨AI⟩ arrive with the `seed-spec.json` PR |
+| Status | Approved v1.1 · 2026-11-04 (DEC-59; AI Team approval reported by Marwan) · Approved v1.0 · 2026-10-27 (DEC-12 · DEC-23). Values marked ⟨AI⟩ arrive with the `seed-spec.json` PR |
 
 **1. Scope.**
 
@@ -1192,7 +1200,7 @@ Workers treat an unknown ENUM value they read as a warning and skip the row; the
     { "model_key": "M2_SERVICE_TIME", "algorithm_family": "GRADIENT_BOOSTING", "description": "Berth service time (P50 / P90)" }
   ],
   "ml_model_versions": [
-    { "model_key": "M2_SERVICE_TIME", "version_no": 1, "status": "CHAMPION", "artifact_path": "models/m2_service_time/v1.joblib", "trained_at": "2026-11-01T00:00:00Z", "hyperparameters": {} }
+    { "model_key": "M2_SERVICE_TIME", "version_no": 1, "status": "CHAMPION", "artifact_path": "models/m2_service_time/v1.joblib", "trained_at": "2026-11-01T00:00:00Z", "deployed_at": "2026-11-01T00:00:00Z", "hyperparameters": {} }
   ],
   "port_settings": [
     { "setting_key": "solver_time_limit_seconds", "value_type": "INT", "value": "10", "min": 1, "max": 120, "description": "CP-SAT time limit per solve" }
@@ -1200,7 +1208,9 @@ Workers treat an unknown ENUM value they read as a warning and skip the row; the
 }
 ```
 
-- `min` / `max` are optional and omitted for `STRING`, `JSON` and `BOOL`.
+- `min` / `max` are optional and omitted for `STRING`, `JSON` and `BOOL`. They are stored in `port_settings.min_value` and `max_value` (added by P1-B6).
+- A `CHAMPION` row must carry `deployed_at` (schema check).
+- `reference-seed.json` uses the same format, with its rows in [`db/reference-seed.json`](db/reference-seed.json). Its Backend keys are `reminder_lead_minutes` and `min_app_version`. The delay threshold keys are added when DEC-30 gives the numbers (DEC-09).
 - `ml_model_versions` is seeded because `solver_run_model_versions` needs an existing version and `w_part3` cannot insert versions in the MVP (DEC-08). A model with no CHAMPION at go-live has no row; the worker uses the CT-10 fallback.
 
 **3. Seeding rules (Backend).**
