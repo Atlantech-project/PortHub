@@ -53,7 +53,7 @@ These are message keys, not codes. They give a more specific message under one o
 
 | Version | Date | Change |
 | --- | --- | --- |
-| v1.4 | 2026-11-06 | `IDEMPOTENCY_KEY_REUSED` also covers another path or method under the same key (IDEMP-01); `SERVICE_UNAVAILABLE` also answers a request whose key is still running. Wording only, code, status and key unchanged |
+| v1.4 | 2026-11-06 | `IDEMPOTENCY_KEY_REUSED` also covers another path or method under the same key (IDEMP-01). `SERVICE_UNAVAILABLE` (503, `Retry-After`) is now also returned while the first request with the same key still runs; its row already allowed `Retry-After`. Wording only, code, status and key unchanged |
 | v1.3 | 2026-11-06 | Added `DEVICE_REVOKED` 403, introduced by P1-C3 (DEC-60, CT-04 v1.2) |
 | v1.2 | 2026-10-30 | 429 also covers password-change throttling (P1-C2) |
 | v1.1 | 2026-10-30 | Review rule: Frontend and Mobile review critical changes only; QA tests and does not review |

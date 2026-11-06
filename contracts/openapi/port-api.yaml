@@ -280,8 +280,8 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '422':
           description: >-
-            422 VALIDATION_FAILED (the fields, or the `Idempotency-Key` header missing or malformed on a Bearer request) or 422
-            IDEMPOTENCY_KEY_REUSED (the key was used for another request).
+            422 VALIDATION_FAILED (the `Idempotency-Key` header missing or malformed on a Bearer request, or a missing or
+            malformed `X-Device-Id` or `X-App-Version`) or 422 IDEMPOTENCY_KEY_REUSED (the key was used for another request).
           content:
             application/problem+json:
               schema:
@@ -503,7 +503,7 @@ components:
       description: >-
         Required on every write (POST, PUT, PATCH, DELETE) made with `Authorization: Bearer`, except `POST /sync/events`
         (CT-07, `client_event_id`); a missing or malformed key is 422 VALIDATION_FAILED. UUID v4, one per logical write,
-        reused on every retry of it, kept 24 h per token. Same key and same request (method, path, body): the first response
+        reused on every retry of it, kept 24 h per token. Same key and same request (method, path and query, body): the first response
         is replayed, with status, body and the header `Idempotent-Replayed: true`, and the write does not run again. Same
         key with another request: 422 IDEMPOTENCY_KEY_REUSED. Not stored, so a retry runs again: 5xx, 401, 408, 423, 426,
         429. A web session request does not send it and is never refused for its absence.
@@ -524,7 +524,7 @@ components:
     IdempotentReplayed:
       description: >-
         `true` when the response is the stored first response of the same `Idempotency-Key` (Bearer writes); absent on the
-        first response.
+        first response. A stored 4xx is replayed with it too.
       schema:
         type: string
         enum: ['true']
