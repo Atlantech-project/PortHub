@@ -1041,8 +1041,8 @@ Weekday and month are not inputs: the weekday effect is small (Sunday ≈ 7 % lo
 | Owner | AI Team |
 | Status | Open |
 | Closing task | DEC-29 · Sprint 3 |
-| Affects | AI-065 · AI-066 |
-| Decision | ______ |
+| Affects | AI-065 · AI-066 · CT-11 · CT-13 · DEC-16 |
+| Decision | **PROPOSED, not closed (draft 2026-11-06, for the Leads Council): Option B at slot level.** CP-SAT assigns every discharged container to a yard slot (block, bay, row, tier), minimising expected re-handles (a container that leaves earlier stays above one that leaves later) and looking ahead over the other known vessels of the same terminal. A recommendation, not a reservation: the Backend reserves nothing and checks each slot at accept and export. A slot "held" by a recommendation is a solver rule: it counts as taken until the container is recorded in the yard or the plan is `CANCELLED` or `COMPLETED`. `confidence` = containers placed with no expected re-handle ÷ all containers of the request. Yard baseline: no import of the current contents; the terminal officer marks existing stock as `BLOCKED`, other unrecorded slots are free, and the CT Supervisor records placements and removals on the tablet from day one. On close, DEC-16 is edited in place and CT-11 v1.2 / CT-13 follow through `contract-change`. |
 
 <div dir="rtl">
 
