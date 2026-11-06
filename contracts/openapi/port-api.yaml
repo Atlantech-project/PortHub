@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.6.0'
+  version: '1.7.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -177,7 +177,7 @@ paths:
         - cookieAuth: []
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
       requestBody:
         required: true
         content:
@@ -216,7 +216,7 @@ paths:
         - cookieAuth: []
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
       responses:
         '204':
           description: Signed out.
@@ -377,6 +377,15 @@ components:
       in: header
       required: true
       description: Web writes; the value of the XSRF-TOKEN cookie (Sanctum SPA).
+      schema:
+        type: string
+    XsrfTokenWebOnly:
+      name: X-XSRF-TOKEN
+      in: header
+      required: false
+      description: >-
+        Web session only: the value of the XSRF-TOKEN cookie (Sanctum SPA). A mobile request that authenticates with
+        `Authorization: Bearer` does not send it and is never refused for its absence.
       schema:
         type: string
     AppVersion:
