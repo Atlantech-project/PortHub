@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.4 |
+| Version | v1.5 |
 | Status | Approved |
 | Owner | Backend Team |
 | Reviewers | Frontend Team · Mobile Team, critical changes only ([README](README.md)) |
@@ -34,17 +34,20 @@ These rules apply to every endpoint of the port API under `/api/v1`. The endpoin
 | Mobile | `Authorization: Bearer <token>` | Every signed-in request |
 | Mobile | `X-App-Version` | Every request. A Bearer request without it, or with a value that is not `x.y.z`, is 422 `VALIDATION_FAILED`; a version older than the port's minimum is 426. A web request (session cookie) may omit it |
 | Mobile | `X-Device-Id` | Every request |
-| Mobile | `Idempotency-Key` | Every write (section 4) |
+| Mobile | `Idempotency-Key` | Every write made with a Bearer token (section 4) |
 
 The web client gets the CSRF cookie from `GET /sanctum/csrf-cookie`. A missing or stale token returns 419 `SESSION_EXPIRED`: fetch a new cookie and retry.
 
 ## 4. Idempotency
 
-- Every mobile write carries an `Idempotency-Key`: a UUID v4, one per logical write. Retries of the same write reuse the same key.
-- The server keeps a key for 24 hours.
-- Same key and same body: the first response is replayed, and the write does not run again.
-- Same key and a different body: 422 `IDEMPOTENCY_KEY_REUSED`.
-- A missing or malformed key: 422 `VALIDATION_FAILED`.
+- Every mobile write carries an `Idempotency-Key`: a UUID v4, one per logical write. Retries of the same write reuse the same key. "Mobile write" means a POST, PUT, PATCH or DELETE made with `Authorization: Bearer`; a web request (session cookie) does not send the header and is never refused for its absence.
+- The server keeps a key for 24 hours. A key belongs to the Bearer token that sent it: the same key from another token or user is a different request.
+- Same key and same request (method, path with query, body): the first response is replayed with its status and body plus the header `Idempotent-Replayed: true`, and the write does not run again. This includes `POST /api/v1/auth/logout`: a retry after a lost response gets 204 again, although the token is revoked by then.
+- Same key and a different request (another body, path or method): 422 `IDEMPOTENCY_KEY_REUSED`.
+- A missing or malformed key: 422 `VALIDATION_FAILED` on the field `Idempotency-Key`. A token that is not valid is refused first (401), as for any other request.
+- A replay is given only to a caller who passes the checks that come before the write: authentication, device, account state, password change, role and ability, route terminal scope, app version and licence. A revoked device or token, a disabled account or a lost role gets the usual refusal, not the stored response. Checks inside the endpoint (for example a terminal id in the body) are not repeated. The one exception is `POST /api/v1/auth/logout`: its retry is answered with 204 before authentication, because the first request revoked the token.
+- Only the first response is stored, and only when the write itself produced it: a refusal from the checks above (401, 403, 423, 426, a missing key) is never stored, and neither is a 5xx, 408 or 429, so a retry with the same key runs the write again. Every response the write produces, including a 422 or a 409, is stored and replayed.
+- Two requests with the same key at the same time run the write once. The second waits briefly and replays; if the first is still running it answers 503 `SERVICE_UNAVAILABLE` with `Retry-After`: send the same request again with the same key.
 - Sync events do not use this header; they keep `client_event_id` (CT-07).
 - `POST /api/v1/auth/mobile/login` (CT-04) and `POST /api/v1/broadcasting/auth` (CT-06) do not use this header either, so a token or a signature is never replayed.
 
@@ -329,6 +332,7 @@ Response header: `Retry-After: 60`
 
 | Version | Date | Change |
 | --- | --- | --- |
+| v1.5 | 2026-11-06 | Section 4 states what the server does with `Idempotency-Key`: applies to every Bearer write, scoped to the token, replay header `Idempotent-Replayed: true`, what is and is not stored, concurrent twins, `POST /sync/events` exempt (IDEMP-01). A clarification of the rule already in v1.4, no new field or code |
 | v1.4 | 2026-11-06 | `X-App-Version` is required on every Bearer request: missing or malformed is 422, older than the minimum is 426; web requests may omit it (P1-C3 review, D-B) |
 | v1.3 | 2026-10-31 | Mobile sign-in and channel authorisation do not use `Idempotency-Key` (CT-04, CT-06) |
 | v1.2 | 2026-10-30 | 429 also covers password-change throttling (P1-C2) |
