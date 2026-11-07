@@ -556,7 +556,7 @@ The schema describes the **payload only**. `envelope.schema.json` (CT-08) refere
 | Owner | Backend Team (sending) on the AI Team schema |
 | Reviewers | AI Team |
 | Output | `contracts/ai/c03-yard.schema.json` (payload only) |
-| Status | Approved v1.1 · 2026-10-27 (plural table names, CT-17) · v1.0 2026-10-27 (DEC-16) |
+| Status | **Proposed v1.2 (DEC-29 at slot level, DEC-16 edited in place; draft 2026-11-06, not approved)** · Approved v1.1 · 2026-10-27 (plural table names, CT-17) · v1.0 2026-10-27 (DEC-16) |
 
 The schema describes the **payload only**. `envelope.schema.json` (CT-08) references it with `if job_type = YARD_PLACEMENT`. The job runs on its own queue, **`queue:yard`**, served by a separate worker process (own DB account and grants per DEC-08, own heartbeat).
 
@@ -645,9 +645,9 @@ CREATE TABLE `yard_runs` (
 **Result:**
 
 - **Partial placement:** if at least one container is placed, the outcome is `YARD_REC_GENERATED` and unplaced containers get no `yard_placement_items` row. If none can be placed, the outcome is `GENERATION_FAILED` with `INFEASIBLE`.
-- **`yard_slot_id`:** always `NULL` in v1 (block level, FR-2.2.3). Nothing the worker writes is a reservation; any capacity check at accept or export time belongs to the Backend.
-- **Capacity counting:** active slots with `container_id IS NULL`, minus capacity already given to other recommendations of the same terminal in `YARD_REC_GENERATED` or `YARD_REC_ACCEPTED` (not yet exported). Counted in TEU via `container_size_types.teu_factor`, 1 slot = 1 TEU.
-- **`confidence`** = `preferred_zone_count / in_scope_count`, rounded to 3 decimals (DEC-29 Option A). Never null with `YARD_REC_GENERATED`, always null with `GENERATION_FAILED`. Reefer, DG and OOG containers can only go to their zone; general containers may overflow to a special zone and then count as not preferred.
+- **`yard_slot_id`:** filled for every placed container, as a recommendation and not a reservation (v1.2, DEC-29). Nothing the worker writes is a reservation; the Backend checks each slot at accept and at export (`YARD_SLOT_CONFLICT`).
+- **Capacity counting:** slots of the same terminal that are `ACTIVE` (not `BLOCKED`) with `container_id IS NULL`, minus the slots held by other recommendations of the same terminal in `YARD_REC_GENERATED`, `YARD_REC_ACCEPTED` or `EXPORTED_TO_TOS`, until the container is recorded in the yard or the plan is `CANCELLED` or `COMPLETED` (read from `operational_plans.status`). Holding a slot is a rule of the solver, not a Backend reservation. Counted in TEU via `container_size_types.teu_factor`, 1 slot = 1 TEU; a 40 ft or 45 ft container takes two adjacent slots (representation: G-04, pending). The solve also reads, as occupied capacity, requests of the same terminal that have an ACTIVE BAPLE and an ETA but no plan yet. Other terminals are never read.
+- **`confidence`** = containers placed with no expected re-handle ÷ `in_scope_count`, rounded to 3 decimals (DEC-29). Never null with `YARD_REC_GENERATED`, always null with `GENERATION_FAILED`. Reefer, DG and OOG containers can only go to their zone.
 
 **`yard_runs.result_detail`:**
 
@@ -655,7 +655,7 @@ CREATE TABLE `yard_runs` (
 {
   "in_scope_count": 212,
   "placed_count": 208,
-  "preferred_zone_count": 200,
+  "no_rehandle_count": 200,
   "unplaced": [
     { "manifest_entry_id": 99812, "reason_code": "NO_REEFER_CAPACITY" },
     { "manifest_entry_id": 99840, "reason_code": "NO_DG_ZONE" }
@@ -664,7 +664,7 @@ CREATE TABLE `yard_runs` (
 }
 ```
 
-- **`unplaced[].reason_code`** (closed list for v1): `NO_REEFER_CAPACITY` · `NO_DG_ZONE` · `NO_OOG_ZONE` · `NO_CAPACITY`.
+- **`unplaced[].reason_code`** (closed list for v1): `NO_REEFER_CAPACITY` · `NO_DG_ZONE` · `NO_OOG_ZONE` · `NO_CAPACITY` · `NO_SLOT_OF_LENGTH` · `STACK_HEIGHT_REACHED` (the last two are v1.2; names to confirm with the AI Team). `no_rehandle_count` replaces `preferred_zone_count` (v1.2; name to confirm with the AI Team).
 - **`failure_reason`:** `{ "error_category": "...", "message": "..." }`, same shape as C-02, non-null only when the run is FAILED. `terminal_recommendations.failure_reason` holds `"<ERROR_CATEGORY>: <message>"` truncated to 500 characters.
 - **`error_category`** for yard: `INVALID_ENVELOPE` · `PRECONDITION_FAILED` · `CONFIGURATION_ERROR` (no container yard, no active slots or no active rationale template) · `DATA_UNAVAILABLE` · `INFEASIBLE` · `TIMEOUT` · `INTERNAL_ERROR`. `SOLVER_ERROR` is not used.
 
@@ -912,7 +912,7 @@ FastAPI is cancelled (DEC-10), so validation is an async job. A result with viol
 | `validation_type` | Check |
 | --- | --- |
 | `OVERRIDE` | `recommendation_options` exists and its recommendation is `PENDING_REVIEW` or `MODIFIED_BY_STAFF` |
-| `YARD_ADJUSTMENT` | `terminal_recommendations` exists, `rec_type = YARD_PLACEMENT`, `lifecycle_status` is `YARD_REC_GENERATED` or `YARD_REC_ACCEPTED`; every `manifest_entry_id` belongs to the ACTIVE BAPLIE of that request; every block belongs to the terminal's yard |
+| `YARD_ADJUSTMENT` | `terminal_recommendations` exists, `rec_type = YARD_PLACEMENT`, `lifecycle_status` is `YARD_REC_GENERATED` or `YARD_REC_ACCEPTED`; every `manifest_entry_id` belongs to the ACTIVE BAPLIE of that request; every block belongs to the terminal's yard; a proposed `yard_slot_id` belongs to that block, is `ACTIVE`, is empty and is not held by another recommendation (v1.2, CT-11); for a 40 ft or 45 ft container its second slot is free too |
 
 **Result** (`validation_result` in C-06, defined in `c06-completion.schema.json`):
 
