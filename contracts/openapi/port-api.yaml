@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.6.0'
+  version: '1.8.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -172,12 +172,13 @@ paths:
         has at least 8 characters with letters and numbers, and differs from the current one. The user's other sessions close, as on the web: the other web sessions end by themselves, and every other
         mobile token of the user is revoked (`revoked_at` is set, the rows stay). The token or session that made the
         change stays valid. Throttled at 5 requests
-        per minute per user.
+        per minute per user. A Bearer request needs an `Idempotency-Key` (CT-01 section 4).
       security:
         - cookieAuth: []
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -186,7 +187,12 @@ paths:
               $ref: '#/components/schemas/ChangePasswordRequest'
       responses:
         '200':
-          description: Changed; the updated profile, with `must_change_password` false.
+          description: >-
+            Changed; the updated profile, with `must_change_password` false. A retry with the same `Idempotency-Key` and body
+            gets this response again.
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
           content:
             application/json:
               schema:
@@ -198,11 +204,50 @@ paths:
         '419':
           $ref: '#/components/responses/SessionExpired'
         '422':
-          $ref: '#/components/responses/ValidationFailed'
+          description: >-
+            422 VALIDATION_FAILED (the fields, or the `Idempotency-Key` header missing or malformed on a Bearer request) or 422
+            IDEMPOTENCY_KEY_REUSED (the key was used for another request).
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+              examples:
+                validationFailed:
+                  value:
+                    type: https://atlantech.io/errors/validation-failed
+                    title: 'Validation failed'
+                    status: 422
+                    code: VALIDATION_FAILED
+                    message_key: errors.validation_failed
+                    detail: 'The Idempotency-Key field is required.'
+                    errors:
+                      Idempotency-Key:
+                        - validation.required
+                idempotencyKeyReused:
+                  value:
+                    type: https://atlantech.io/errors/idempotency-key-reused
+                    title: 'Idempotency key reused'
+                    status: 422
+                    code: IDEMPOTENCY_KEY_REUSED
+                    message_key: errors.idempotency_key_reused
+                    detail: 'This request key was already used for a different request. Send the request again with a new key.'
         '429':
           $ref: '#/components/responses/TooManyAttempts'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
+        '503':
+          description: >-
+            503 SERVICE_UNAVAILABLE. A Bearer request with an `Idempotency-Key` whose first request is still running answers
+            503 with `Retry-After`; send the same request again with the same key.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /api/v1/auth/logout:
     post:
       tags: [Auth]
@@ -211,15 +256,22 @@ paths:
       description: >-
         Web: ends the session. Mobile: revokes the Bearer token the request carries (`revoked_at` is set, the row stays);
         the user's other devices keep their tokens (CT-04). It stays open while `must_change_password` is set. The next
-        signed-in request with the same session or token is 401.
+        signed-in request with the same session or token is 401. A Bearer request needs an `Idempotency-Key`; a retry with
+        the same key replays the 204.
       security:
         - cookieAuth: []
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '204':
-          description: Signed out.
+          description: >-
+            Signed out. A mobile retry with the same `Idempotency-Key` after a lost response gets 204 again (the token is
+            revoked by then, so without the key it would be 401).
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -227,9 +279,48 @@ paths:
         '419':
           $ref: '#/components/responses/SessionExpired'
         '422':
-          $ref: '#/components/responses/ValidationFailed'
+          description: >-
+            422 VALIDATION_FAILED (the `Idempotency-Key` header missing or malformed on a Bearer request, or a missing or
+            malformed `X-Device-Id` or `X-App-Version`) or 422 IDEMPOTENCY_KEY_REUSED (the key was used for another request).
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+              examples:
+                validationFailed:
+                  value:
+                    type: https://atlantech.io/errors/validation-failed
+                    title: 'Validation failed'
+                    status: 422
+                    code: VALIDATION_FAILED
+                    message_key: errors.validation_failed
+                    detail: 'The Idempotency-Key field is required.'
+                    errors:
+                      Idempotency-Key:
+                        - validation.required
+                idempotencyKeyReused:
+                  value:
+                    type: https://atlantech.io/errors/idempotency-key-reused
+                    title: 'Idempotency key reused'
+                    status: 422
+                    code: IDEMPOTENCY_KEY_REUSED
+                    message_key: errors.idempotency_key_reused
+                    detail: 'This request key was already used for a different request. Send the request again with a new key.'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
+        '503':
+          description: >-
+            503 SERVICE_UNAVAILABLE. A Bearer request with an `Idempotency-Key` whose first request is still running answers
+            503 with `Retry-After`; send the same request again with the same key.
+          headers:
+            Retry-After:
+              $ref: '#/components/headers/RetryAfter'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
   /api/v1/audit-logs:
     get:
       tags: [Audit]
@@ -379,6 +470,15 @@ components:
       description: Web writes; the value of the XSRF-TOKEN cookie (Sanctum SPA).
       schema:
         type: string
+    XsrfTokenWebOnly:
+      name: X-XSRF-TOKEN
+      in: header
+      required: false
+      description: >-
+        Web session only: the value of the XSRF-TOKEN cookie (Sanctum SPA). A mobile request that authenticates with
+        `Authorization: Bearer` does not send it and is never refused for its absence.
+      schema:
+        type: string
     AppVersion:
       name: X-App-Version
       in: header
@@ -399,10 +499,14 @@ components:
     IdempotencyKey:
       name: Idempotency-Key
       in: header
-      required: true
+      required: false
       description: >-
-        Mobile writes; UUID v4 per logical write, kept 24 h. Same key and body replays the first response;
-        same key with another body is 422 IDEMPOTENCY_KEY_REUSED.
+        Required on every write (POST, PUT, PATCH, DELETE) made with `Authorization: Bearer`, except `POST /sync/events`
+        (CT-07, `client_event_id`); a missing or malformed key is 422 VALIDATION_FAILED. UUID v4, one per logical write,
+        reused on every retry of it, kept 24 h per token. Same key and same request (method, path and query, body): the first response
+        is replayed, with status, body and the header `Idempotent-Replayed: true`, and the write does not run again. Same
+        key with another request: 422 IDEMPOTENCY_KEY_REUSED. Not stored, so a retry runs again: 5xx, 401, 408, 423, 426,
+        429. A web session request does not send it and is never refused for its absence.
       schema:
         type: string
         format: uuid
@@ -417,6 +521,13 @@ components:
       schema:
         type: integer
         example: 60
+    IdempotentReplayed:
+      description: >-
+        `true` when the response is the stored first response of the same `Idempotency-Key` (Bearer writes); absent on the
+        first response. A stored 4xx is replayed with it too.
+      schema:
+        type: string
+        enum: ['true']
   schemas:
     DateTime:
       type: string
