@@ -581,7 +581,7 @@ The schema describes the **payload only**. `envelope.schema.json` (CT-08) refere
 - **One transaction before RPUSH:** set `terminal_recommendations` (`rec_type = YARD_PLACEMENT`, `lifecycle_status = YARD_REC_REQUESTED`) and insert `yard_runs` (QUEUED).
 - **`triggered_by_user_id`:** `null` for the automatic trigger; the user who pressed "Regenerate" otherwise.
 - **Regenerate:** offered when `lifecycle_status` is `GENERATION_FAILED` or `YARD_REC_REJECTED`. Because of `uq_tr_rec_type`, the same row is reused: reset to `YARD_REC_REQUESTED`, delete the old `yard_placement_items` rows, mark any QUEUED or RUNNING `yard_runs` of that row as `REPLACED`, then insert a new `yard_runs`.
-- **Stale recommendation:** after a confirmed REPLAN or a BAPLIE revision becoming ACTIVE, the Backend regenerates automatically if the recommendation is not yet `YARD_REC_ACCEPTED`. If it is accepted, the Backend raises a notification only. From v1.2 the same applies when another vessel's ETA or plan changes the departure order a yard recommendation was solved with (DEC-29 open item 9; the exact trigger is to be agreed between the Backend and the AI Team).
+- **Stale recommendation:** after a confirmed REPLAN or a BAPLIE revision becoming ACTIVE, the Backend regenerates automatically if the recommendation is not yet `YARD_REC_ACCEPTED`. If it is accepted, the Backend raises a notification only. From v1.2 the same applies when a plan of another vessel of the same terminal is confirmed or cancelled (DEC-29 open item 9): every yard recommendation of that terminal that is not yet `YARD_REC_ACCEPTED` is regenerated, one run at a time per recommendation (`uq_yr_active`). A change of `requested_eta` on a request that has no plan yet does not regenerate anything: such a request gets no slots (DEC-29 rule 5).
 - **Incomplete lines:** the Backend blocks yard recommendations while any line of the ACTIVE file has a NULL `full_empty` **or** a NULL `port_of_discharge`.
 - **No one-at-a-time rule:** different terminal recommendations may run in parallel; `uq_yr_active` allows one active run per terminal recommendation.
 - The Backend validates every message against the schema before RPUSH.
@@ -648,7 +648,7 @@ CREATE TABLE `yard_runs` (
 - **`yard_slot_id`:** filled for every placed container, as a recommendation and not a reservation (v1.2, DEC-29). Nothing the worker writes is a reservation; the Backend checks each slot at accept and at export (`YARD_SLOT_CONFLICT`).
 - **Capacity counting:** slots of the same terminal that are `ACTIVE` (not `BLOCKED`) with `container_id IS NULL`, minus the slots held by other recommendations of the same terminal in `YARD_REC_GENERATED`, `YARD_REC_ACCEPTED` or `EXPORTED_TO_TOS`, until the container is recorded in the yard or the plan is `CANCELLED` or `COMPLETED` (read from `operational_plans.status`). Holding a slot is a rule of the solver, not a Backend reservation. Counted in TEU via `container_size_types.teu_factor`, 1 slot = 1 TEU; a 40 ft or 45 ft container takes two adjacent slots: bays b and b+1, same block, row and tier (representation: G-04, pending). Requests of the same terminal that have an ACTIVE BAPLE and an ETA but no confirmed plan get no slots; their expected discharge TEU is kept free in compatible zones, in ETA order (DEC-29 rule 5). Other terminals are never read.
 - **Yard baseline (DEC-29 rule 11):** the current contents of the yard are not imported. The terminal officer sets every slot of a stack that holds existing stock (all tiers of a bay and row) to `BLOCKED` and unblocks it once that stock has left. Every other unrecorded `ACTIVE` slot counts as free. The CT Supervisor records the actual slot when it differs from the recommendation.
-- **`confidence`** = containers placed with zero expected re-handles ÷ `in_scope_count`, rounded to 3 decimals (DEC-29 rule 8). Never null with `YARD_REC_GENERATED`. With `GENERATION_FAILED` it stays null (as in v1.1); DEC-29 rule 8 says 0 for a run that places nothing, and this has to be settled with the AI Team before v1.2 is approved. Reefer, DG and OOG containers can only go to their zone.
+- **`confidence`** = containers placed with zero expected re-handles ÷ `in_scope_count`, rounded to 3 decimals (DEC-29 rule 8). Never null with `YARD_REC_GENERATED`. Always null with `GENERATION_FAILED`, including a run that places nothing: a failed run has no recommendation to be confident about, and 0 would read as a poor plan (DEC-29 rule 8, corrected). Reefer, DG and OOG containers can only go to their zone.
 
 **`yard_runs.result_detail`:**
 
@@ -657,6 +657,9 @@ CREATE TABLE `yard_runs` (
   "in_scope_count": 212,
   "placed_count": 208,
   "no_rehandle_count": 200,
+  "placements": [
+    { "manifest_entry_id": 99701, "departure_at": "2026-11-12T06:00:00Z", "departure_source": "ONWARD_PLAN", "expected_rehandles": 0 }
+  ],
   "unplaced": [
     { "manifest_entry_id": 99812, "reason_code": "NO_REEFER_CAPACITY" },
     { "manifest_entry_id": 99840, "reason_code": "NO_DG_ZONE" }
@@ -666,6 +669,7 @@ CREATE TABLE `yard_runs` (
 ```
 
 - **`unplaced[].reason_code`** (closed list for v1): `NO_REEFER_CAPACITY` · `NO_DG_ZONE` · `NO_OOG_ZONE` · `NO_CAPACITY` · `NO_SLOT_OF_LENGTH` · `STACK_HEIGHT_REACHED` (the last two are v1.2; names to confirm with the AI Team). `no_rehandle_count` replaces `preferred_zone_count` (v1.2; name to confirm with the AI Team).
+- **`placements[]`** (optional, v1.2, DEC-29 rule 10): one entry per placed container for evaluation: `manifest_entry_id`, `departure_at` (UTC, null when unknown), `departure_source` (`ONWARD_PLAN` · `ONWARD_REQUEST_ETA` · `ONWARD_BAPLIE_ETA` · `IMPORT_DWELL` · `UNKNOWN`, matching DEC-29 rule 2; names to confirm with the AI Team) and `expected_rehandles`. It stays in `yard_runs.result_detail`, which the Backend never edits, so the history of every run is kept even when `yard_placement_items` is deleted on regeneration. The Backend does not read it and does not return it in list calls.
 - **`failure_reason`:** `{ "error_category": "...", "message": "..." }`, same shape as C-02, non-null only when the run is FAILED. `terminal_recommendations.failure_reason` holds `"<ERROR_CATEGORY>: <message>"` truncated to 500 characters.
 - **`error_category`** for yard: `INVALID_ENVELOPE` · `PRECONDITION_FAILED` · `CONFIGURATION_ERROR` (no container yard, no active slots or no active rationale template) · `DATA_UNAVAILABLE` · `INFEASIBLE` · `TIMEOUT` · `INTERNAL_ERROR`. `SOLVER_ERROR` is not used.
 
