@@ -444,7 +444,7 @@ All seven fields are required; no other field is allowed (`additionalProperties:
 | Owner | Backend Team (sending) on the AI Team schema |
 | Reviewers | AI Team |
 | Output | `contracts/ai/c02-part2-solve.schema.json` (payload only) |
-| Status | Approved v1.1 · 2026-10-27 (plural table names, CT-17) · v1.0 2026-10-26 (DEC-15) |
+| Status | **Proposed v1.2 (DEC-28 follow-ups G-11 and G-12; draft 2026-11-08, not approved)** · Approved v1.1 · 2026-10-27 (plural table names, CT-17) · v1.0 2026-10-26 (DEC-15) |
 
 The schema describes the **payload only**. `envelope.schema.json` (CT-08) references it with `if job_type = PART2_SOLVE then payload: { $ref: c02-part2-solve.schema.json }`. C-01, C-03 and C-04 follow the same pattern.
 
@@ -481,7 +481,7 @@ The schema describes the **payload only**. `envelope.schema.json` (CT-08) refere
 
 | `trigger_type` | Sent by the Backend when | `berthing_request_ids` | Extra fields |
 | --- | --- | --- | --- |
-| `NEW_REQUEST` | Part 1 finishes with `WINDOWS_FOUND` | Requests in `ENTRY_WINDOW_CONFIRMED` or `RECOMMENDATION_GENERATED` | — |
+| `NEW_REQUEST` | Staff confirm an entry window, so the request becomes `ENTRY_WINDOW_CONFIRMED` (Part 1 finishing with `WINDOWS_FOUND` does not enqueue anything). For a container vessel the request must also have an ACTIVE BAPLIE: the solve is enqueued when both hold, whichever comes last | Requests in `ENTRY_WINDOW_CONFIRMED` or `RECOMMENDATION_GENERATED` | — |
 | `MANUAL` | A user presses "Regenerate" | Same as `NEW_REQUEST` | `requested_by_user_id` (required) |
 | `RESOURCE_CHANGE` | A berth, tug or pilot becomes unavailable or available again | Pending requests whose current recommendation uses a changed resource, or whose window overlaps the change. The Backend computes this from `recommendation_options` and `recommendation_option_tugs` | `changed_resources` (required, `minItems: 1`) |
 | `REPLAN` | A deviation is recorded on a confirmed plan | Exactly one: the request that owns the plan | `operational_plan_id` (required) |
@@ -497,6 +497,7 @@ The schema describes the **payload only**. `envelope.schema.json` (CT-08) refere
 - **One solve at a time:** the Backend never enqueues a `PART2_SOLVE` while another is QUEUED or RUNNING. Triggers that arrive meanwhile are held and merged into one message sent when the current solve finishes.
 - **`payload.trigger_type`** is the highest-precedence type in `triggers`: `REPLAN > RESOURCE_CHANGE > MANUAL > NEW_REQUEST`. The Backend writes it to `solver_runs.trigger_type`.
 - **One entry per request:** a request id appears in at most one entry. If two triggers hit the same request, the higher-precedence entry wins; two `RESOURCE_CHANGE` entries merge their `changed_resources`.
+- **Container vessel waits for its BAPLIE (v1.2, DEC-28):** a request of a container vessel (`vessel_types.code = CONTAINER`) is not put in a `NEW_REQUEST` entry before it has an ACTIVE BAPLIE. It waits without a new status (`ENTRY_WINDOW_CONFIRMED`, no QUEUED `solver_runs` row) and the Backend enqueues it when the BAPLIE becomes ACTIVE. Vessels that are not container vessels are not affected.
 - **No empty solves:** a resource change that affects no pending request is not enqueued.
 - **Confirmed plans change only through `REPLAN`:** a resource change that hits a confirmed plan is sent as a `REPLAN` entry for that plan.
 - **Envelope `triggered_by_user_id`:** the `requested_by_user_id` of the MANUAL entry if there is one, otherwise `null`. With several MANUAL entries, it is the user of the MANUAL trigger the Backend received last.
@@ -532,7 +533,7 @@ The schema describes the **payload only**. `envelope.schema.json` (CT-08) refere
 | `FIFO_FALLBACK` | `ERROR` | FIFO plans (`source = FIFO`) for the requests that pass the hard filter. C-06 carries `status = DONE` (plans were written) with the technical reason in `error_category`, while `solver_runs.status` stays `ERROR` (CT-14) |
 | `GENERATION_FAILED` | `ERROR` | None |
 
-- **Per-request `outcome`:** `SOLVED` · `FIFO_FALLBACK` · `NO_FEASIBLE_PLAN`.
+- **Per-request `outcome`:** `SOLVED` · `FIFO_FALLBACK` · `NO_FEASIBLE_PLAN` · `NOT_SOLVED` (v1.2). `NOT_SOLVED` marks a request that was left out of the solve and carries `reason_code`; `recommendation_id` is `null`, `options_count` is 0 and `binding_constraints` is empty. The only value of `reason_code` for now is `MISSING_MOVES`: the request has no ACTIVE BAPLIE (for example it was withdrawn after the solve was enqueued), so its moves are NULL and are never guessed (DEC-28). The request stays `ENTRY_WINDOW_CONFIRMED`, and the Backend enqueues it again when a BAPLIE becomes ACTIVE. `reason_code` is present only with `NOT_SOLVED`. Adding a reason code is a minor version change. The names `NOT_SOLVED` and `reason_code` are to be confirmed with the AI Team.
 - **`options_count`:** 1 to 3 when a recommendation is written, otherwise 0 (DEC-23). Options 2 and 3 are returned only within `solver_option_equivalence_pct` of option 1 (CT-18).
 - **`binding_constraints`:** non-empty only when the per-request outcome is `NO_FEASIBLE_PLAN`. `detail` is an English diagnostic string, at most 255 characters.
   - `kind = "SAFETY"`: `constraint_type_code` is any `constraint_types.code` from the CT-18 seed (for example `MAX_WIND_KN`).
