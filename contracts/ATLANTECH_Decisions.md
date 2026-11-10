@@ -1956,6 +1956,9 @@ Decisions that belong to one AI backlog task and have no `DEC-` ID. Each is keye
 | AI-011 | Shared worker runtime | AI Team | Proposed |
 | AI-013 | Data-access layer | AI Team | Proposed |
 | AI-015 | Test harness and scenario generator | AI Team | Proposed |
+| AI-050 | Port-state loader: pilot identification, berth availability and holds | AI Team | Proposed |
+| AI-053 | Delay-risk Phase 1: missing inputs, boundaries and flags | AI Team | Proposed |
+| AI-052 | Service time Phase 1: profile choice, rounding and non-container vessels | AI Team | Proposed |
 
 ### AI-001 · AI scope and component inventory
 
@@ -2100,3 +2103,61 @@ Decisions that belong to one AI backlog task and have no `DEC-` ID. Each is keye
 
 - The schema copy is at PortHub `b4d2deb`. A Backend migration adds `port_settings.min_value` and `port_settings.max_value`; the generator writes no `port_settings` rows, so it is not affected, but the copy needs refreshing when PortHub regenerates `schema.sql`.
 - AI-022 supplies real reference-port master data; this generator doesn't replace it.
+
+### AI-050 · Port-state loader: pilot identification, berth availability and holds
+
+| | |
+| --- | --- |
+| Source | AI-050 (backlog: "Pilot occupancy rule F-21 implemented as decided") · AI-006 follow-up "Berth availability rule not written as a separate statement" · DEC-32 · DEC-06 · `schema.sql` `plan_components` (lines 1030–1061), `operational_plans` (918–936), `recommendation_options` (1149–1179), `berths` (240–259) |
+| Owner | AI Team |
+| Status | Proposed |
+| Affects | AI-051 · AI-055 · AI-060 · P5-M1 · DEC-32 (applies it; does not change it) |
+| Decision | ______ |
+| Proposed change | 2026-11-05 · AI-050 · (1) **Pilot of a confirmed plan.** The pilot of a `PILOT` row of `plan_components` is `assigned_user_id` when it is set; otherwise it is `recommendation_options.pilot_user_id` of the option the plan references (`operational_plans.recommendation_option_id`). `assigned_user_id` wins, because a replacement (P5-M1) may change it. The interval is the `PILOT` row's `planned_start` and `planned_end` (DEC-32 rule 4). A `PILOT` row can identify its pilot only this way, because `chk_pc_resource` leaves its `berth_id`, `tugboat_id` and `terminal_id` NULL. No other component needs the fallback: a `TUG` row is identified by `tugboat_id` (never NULL for a `TUG` row; its master comes from `tug_master_profiles.assigned_tugboat_id`, DEC-32 rule 2(b)), a `BERTH` row by `berth_id`, and a `TERMINAL_OPS` row by `terminal_id`. (2) **Berth available** for `[start, end)` when: (a) `berths.status` is `ACTIVE`, not `MAINTENANCE` or `INACTIVE`; (b) a `berth_terminals` row allows the berth for the request's terminal; (c) it is not busy, meaning it appears, over an overlapping interval, in a `BERTH` row of `plan_components` with `reservation_state = RESERVED` under an `operational_plans` row with `status = CONFIRMED`, or in option 1 of a recommendation whose status is `PENDING_REVIEW` or `MODIFIED_BY_STAFF` (`recommendation_options.berth_id`, `planned_start`, `planned_end`; for `MODIFIED_BY_STAFF` the assignment as modified). `INVALIDATED`, `REPLACED` and `REJECTED` recommendations and options 2 and 3 hold nothing. Intervals are half-open. The option window is the real berth stay, so a berth hold does not over-reserve. A delayed vessel still alongside after its `planned_end` is not detected by the loader; delays arrive as `REPLAN` triggers (CT-10). (3) **Holds carry their request.** Every hold the loader returns (confirmed `plan_components` rows and pending option-1 holds, for berths, pilots and tugs) carries its `berthing_request_id`, and a pending hold also its `recommendation_id` and option rank, so the solver can drop the holds of the requests in the current run and their previous `PENDING_REVIEW` recommendations (DEC-32 rule 5, DEC-06). The loader exposes them and does not drop them itself. Pending holds are not `RESERVED` rows and go beyond the backlog output list; DEC-32 rule 3(b) requires them. (4) **Overlap, not containment:** the loader returns every hold, shift and status row that overlaps `[horizon_start, horizon_end)`; both are required arguments. · Reason: DEC-32 names `assigned_user_id` for the pilot of a confirmed plan, but that column is filled at dispatch (`chk_pc_assigned` allows NULL), so a confirmed plan could show no pilot and the pilot would look free; AI-006 left the berth rule unwritten · Evidence: `schema.sql` lines 922, 1033–1041, 1058–1059, 1155–1157, 248; DEC-32 rules 3 to 5; `part2/state/` and its tests on branch `feature/AI-050-port-state-loader` · Impact: AI-051, AI-055 (the solver drops the holds of its own run), AI-060, P5-M1 (pilot replacement, same rule); Backend · Awaiting: AI Team (owner) |
+| Approval | None yet as the team decision. Mostafa Rashwan (Lead Council) approved the AI-050 plan with these rulings on 2026-11-05. |
+
+**Follow-ups (they don't reopen the decision):**
+
+- Backend: confirm rule (1), or fill `plan_components.assigned_user_id` for the `PILOT` row at confirm time, which makes the fallback unnecessary. The Backend confirmed rule (1) on 2026-11-06 (G-16); DEC-32 rule 4 is amended to match.
+- If `MODIFIED_BY_STAFF` versions keep the staff-modified assignment somewhere other than option 1 of that recommendation, the loader must read it from there (Backend to confirm).
+
+### AI-053 · Delay-risk Phase 1: missing inputs, boundaries and flags
+
+| | |
+| --- | --- |
+| Source | AI-053 (backlog: "Write NULL until a rule is approved; never invent a score") · DEC-21 rules 1 to 5 · DEC-30 TR-10 and TR-12 · CT-18 `part1_stored_data_max_age_hours` |
+| Owner | AI Team |
+| Status | Proposed |
+| Affects | AI-055 · AI-057 · P-38 (Frontend Team) · DEC-21 (applies it; does not change it) |
+| Decision | ______ |
+| Proposed change | 2026-11-05 · AI-053 · Result = max(W, C), so a missing input can only make the level too low: a HIGH is always reliable, and a LOW or MEDIUM computed with a gap is a lower bound. (1) **NULL stays limited** to DEC-21 rule 5 (forecast missing or older than `part1_stored_data_max_age_hours`, 48 h), plus the degenerate case of no forecast point in the option's window. In every other case the level is computed, and each gap is a flag next to `rules_unvalidated`; the rationale names what was not assessed. (2) **Congestion C unavailable** (median of daily arrivals 0, fewer than 28 days of history, or either input missing): W alone, flag `congestion_unavailable`; never a division by zero, never NULL. (3) **Boundaries:** gust 30 to 35 kn and wave 1.5 to 2.0 m are MEDIUM, both ends inclusive; HIGH is strictly above 35 kn (gust), 20 kn (wind) and 2.0 m (wave); wind has no MEDIUM band. (4) **Safety-limit headroom is not applied**; the result is unchanged even when `safety_constraints` rows exist, until the headroom cut-offs are agreed. (5) **Post-storm backlog:** "1 to 3 days after" is counted in port days (Africa/Cairo, `port_profiles.timezone`), not UTC days. History unknown is kept apart from no HIGH days: unknown gives flag `storm_history_unknown` and rule 3 is not applied. (6) **Partial forecast coverage:** compute, flag `forecast_partial`, and record the coverage (points used vs expected); NULL only when no point falls in the window. · Reason: DEC-21 names one NULL case and gives no behaviour for a missing arrivals source, missing history, partial coverage, the exact edges, or headroom before TR-10 exists · Evidence: DEC-21 "Decision detail" rules 1 to 5 and its evidence table (edges "gust ≤ 30 kn" vs "30–35"); DEC-30 TR-10 (DEFERRED) and TR-12 (proposed); `part2/delay_risk.py` and its tests on branch `feature/AI-053-delay-risk-phase-1` · Impact: AI-055 and AI-056 (the caller supplies the inputs and reads the flags), AI-057 (rationale names what was not assessed), P-38 (level only) · Awaiting: AI Team (owner) |
+| Approval | None yet as the team decision. Mostafa Rashwan (Leads Council) gave these rulings on 2026-11-05 as interpretations of DEC-21. |
+
+**Follow-ups (they don't reopen the decision):**
+
+- AI Team (open question 1): say where "expected arrivals in the 24 h around the ETA" (berthing requests by ETA, and which statuses?) and the "daily arrivals" for the median come from. DEC-21 doesn't say.
+- AI Team (open question 2): the first 28 days after go-live. The system's own counts give no 28-day median until then, so C is unavailable for every recommendation in that period (flag `congestion_unavailable`, result from W alone, a lower bound). Say whether that is acceptable, or whether a backfilled history (for example the Damietta PortWatch series DEC-21 was calibrated on, scaled by the ratio the rule uses) may seed the median.
+- Raise a Proposed change on DEC-21 with the headroom cut-offs when DEC-30 TR-10 is filled.
+- Revisit rule (6) when DEC-30 closes: if TR-12 is approved as written and read as part of "stale", partial coverage becomes NULL.
+- DEC-21 condition (b) is not done by the pure function, which returns `rule_version`. Recording it in `solver_run_model_versions` belongs to AI-058 (recommendation persistence and version records), and needs a Backend-seeded `ml_model_versions` row for the Phase 1 rule.
+- DEC-21 open item 6: the function returns every input (W maxima, C ratio, post-storm flag, coverage). Storing them with each recommendation is AI-058's, and needs a place to store them (the schema has none beyond `rationale_params`); the Backend/AI Team decide where.
+
+### AI-052 · Service time Phase 1: profile choice, rounding and non-container vessels
+
+| | |
+| --- | --- |
+| Source | AI-052 (backlog: "Resolve profile by date and vessel type with terminal default fallback"; "No valid profile → candidate excluded with reason"; "P90 NULL for FORMULA") · DEC-28 rules 1 to 7 · Architecture §8.6 · `schema.sql` `terminal_productivity_profiles` (1576–1595), `chk_ro_p90` and `chk_ro_values` (1177–1178) |
+| Owner | AI Team |
+| Status | Proposed |
+| Affects | AI-055 · AI-056 · AI-058 · DEC-28 (applies it; does not change it) |
+| Decision | ______ |
+| Proposed change | 2026-11-07 · AI-052 · (1) **Reference date.** The profile is resolved on one date per request and terminal: the port-local date (Africa/Cairo, `port_profiles.timezone`) of the start of the request's earliest confirmed window, passed in by the caller. B3 runs before the solver, so there is no planned start; a stay that crosses a profile change is not split. (2) **Rounding.** `hours = moves / productivity_rate + fixed_overhead_minutes / 60`, rounded up to 0.01 h (`ROUND_CEILING`) once, at the end, so service time errs long as in DEC-28 and DEC-20. (3) **Profile choice.** A row is valid for the candidate terminal when `valid_from` ≤ date and (`valid_to` is NULL or date ≤ `valid_to`), both ends inclusive. A row for the vessel's type beats the terminal default (`vessel_type_id` NULL). Two valid rows at the same level are bad data (the Backend rejects overlaps) and the candidate is excluded with `AMBIGUOUS_PROFILE`; no row is picked. No valid row: `NO_VALID_PROFILE`. (4) **Non-container vessels.** Excluded with `BASIS_UNDEFINED` for Phase 1: DEC-28 open item 4 sets no basis for them and `berthing_requests` has no cargo-quantity field, so no quantity is guessed. This is the vessel-type check, made before the moves check, so the reason names the real cause. (5) **Safety nets.** A container vessel whose profile unit is not `MOVES_PER_HOUR` is excluded with `PROFILE_UNIT_MISMATCH` (`chk_tpp_unit` makes it impossible for a container terminal); a result of 0 h or less is excluded with `NON_POSITIVE_SERVICE_TIME` (`chk_ro_values` needs P50 > 0). Moves unknown (no ACTIVE BAPLIE) is `MISSING_MOVES`, as DEC-28 rule 5 says. Every result records discharge, loading, `loading_estimated`, moves, the profile id, rate, unit, overhead and date (DEC-28 rule 7). · Reason: DEC-28 and the backlog give the formula and the exclusion but not the date, rounding, tie-break or the non-container behaviour · Evidence: DEC-28 "Decision detail"; `part2/service_time.py` and `tests/unit/part2/test_service_time.py` on branch `feature/AI-052-b3-service-time-phase-1` · Impact: AI-055 and AI-056 (the caller reads the profiles, the BAPLIE rows, the loading count and `port_code`, and passes the date; non-container vessels get `NO_FEASIBLE_PLAN` with `BASIS_UNDEFINED`), AI-058 (stores the inputs) · Awaiting: AI Team (owner) |
+| Approval | None yet as the team decision. Mostafa Rashwan (Leads Council) approved the AI-052 plan with rulings 1 to 5 as proposed on 2026-11-07. |
+| Known limitation | **Phase 1 gives no service time to vessels other than container vessels.** Until DEC-28 open item 4 is settled, such a request is left out with `BASIS_UNDEFINED`, so it cannot get a recommendation. Accepted by the Leads Council (Mostafa Rashwan) on 2026-11-07 for Phase 1. |
+
+**Follow-ups (they don't reopen the decision):**
+
+- **DEC-28 open item 4 stays open:** the AI Team sets the B3 basis for vessels other than container vessels (a cargo quantity in tonnes, cubic metres or units needs a request field and a matching `rate_unit`). Then `BASIS_UNDEFINED` is replaced by a computation.
+- AI-055/AI-056: add the reads this function does not do: `terminal_productivity_profiles` (not in `common/db/tables.py` yet), `port_of_discharge` of the ACTIVE BAPLE (the AI-050 loader's `ManifestEntry` has no such field), `port_profiles.port_code` and the loading count; pass the port-local date.
+- DEC-28 open items 1 to 3, 5 to 7 are unchanged (Backend CT-17, CT-10, CT-18; Terminal operations; AI-030).
+- A P50 of 10000 h or more would not fit `decimal(6,2)`; not expected from real profiles. The caller or AI-058 should reject it rather than let the insert fail.
