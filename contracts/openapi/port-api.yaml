@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.9.0'
+  version: '1.10.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -613,6 +613,96 @@ paths:
                   - $ref: '#/components/schemas/Problem'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/roles:
+    post:
+      tags: [Users]
+      operationId: usersAssignRole
+      summary: Give a user a role
+      description: >-
+        Ends the user's active role and inserts the new one in one transaction (DEC-36). `terminal_id` is required for the three `TERMINAL_*` roles and refused for any other. Replacing the last active Port Admin role is 409 CONFLICT. The same role and unit again: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRoleRequest'
+      responses:
+        '200':
+          description: The user with the active role, the history and the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '409 VERSION_CONFLICT (stale `version`) or 409 CONFLICT (the last active Port Admin).'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/roles/end:
+    post:
+      tags: [Users]
+      operationId: usersEndRole
+      summary: End a user's role
+      description: >-
+        Sets `active_to` on the active role; the user is left without a role (403 on every request). Ending the last active Port Admin role is 409 CONFLICT. No active role: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The user with the history and the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '409 VERSION_CONFLICT (stale `version`) or 409 CONFLICT (the last active Port Admin).'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/system/info:
     get:
       tags: [System]
@@ -1060,6 +1150,19 @@ components:
         version:
           type: string
           description: The user's `version` as last read.
+    AssignRoleRequest:
+      type: object
+      required: [role, version]
+      properties:
+        role:
+          type: string
+          enum: [PORT_GM, PORT_STAFF, MARINE_SAFETY_OFFICER, PILOTAGE_MANAGER, PILOTAGE_OFFICER, MARINE_PILOT, TUG_MANAGER, TUG_OFFICER, TUG_MASTER, TERMINAL_ADMIN, TERMINAL_OFFICER, TERMINAL_SUPERVISOR]
+        terminal_id:
+          type: integer
+          minimum: 1
+          description: Required for TERMINAL_ADMIN, TERMINAL_OFFICER and TERMINAL_SUPERVISOR; refused for any other role.
+        version:
+          type: string
     AuditAction:
       type: string
       enum: [CREATE, UPDATE, DELETE, STATUS_CHANGE, SAFETY_EXCEPTION, REJECTED_ATTEMPT]
