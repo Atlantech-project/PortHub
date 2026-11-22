@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.11.0'
+  version: '1.11.1'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -494,6 +494,8 @@ paths:
                 anyOf:
                   - $ref: '#/components/schemas/ValidationProblem'
                   - $ref: '#/components/schemas/Problem'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/users/{user}:
@@ -566,6 +568,8 @@ paths:
                   - $ref: '#/components/schemas/Problem'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/users/{user}/activate:
@@ -611,6 +615,8 @@ paths:
                 anyOf:
                   - $ref: '#/components/schemas/ValidationProblem'
                   - $ref: '#/components/schemas/Problem'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/users/{user}/roles:
@@ -656,6 +662,8 @@ paths:
                   - $ref: '#/components/schemas/Problem'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/users/{user}/roles/end:
@@ -701,6 +709,8 @@ paths:
                   - $ref: '#/components/schemas/Problem'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/users/{user}/devices:
@@ -771,6 +781,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/users/{user}/devices/{device}/revoke:
@@ -803,6 +815,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/users/{user}/devices/{device}/restore:
@@ -835,6 +849,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/system/info:
