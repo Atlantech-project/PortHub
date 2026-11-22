@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.10.0'
+  version: '1.11.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -703,6 +703,140 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/devices:
+    get:
+      tags: [Users]
+      operationId: userDevicesList
+      summary: List a user's devices
+      description: >-
+        The mobile devices of the user (ability `devices.manage`), newest first. The push token is never returned.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of devices.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserDevice'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/devices/revoke-all:
+    post:
+      tags: [Users]
+      operationId: userDevicesRevokeAll
+      summary: Revoke all of a user's devices
+      description: >-
+        Revokes every device of the user that is not revoked yet and all their live tokens. Web sessions are not touched. A user with no devices: 200 with zeros.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The counts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeAllResult'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/devices/{device}/revoke:
+    post:
+      tags: [Users]
+      operationId: userDevicesRevoke
+      summary: Revoke one device
+      description: >-
+        Sets `revoked_at`, clears the push registration and revokes the device's live tokens. The device's next request is 401 and a new sign-in is 403 DEVICE_REVOKED. Revoking again: 200, nothing changes. A device of another user: 404.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/DeviceRowId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The revoked device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDevice'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/devices/{device}/restore:
+    post:
+      tags: [Users]
+      operationId: userDevicesRestore
+      summary: Restore a revoked device
+      description: >-
+        Clears `revoked_at`, so the device can sign in again. Tokens revoked with the device stay revoked and the push registration stays empty until the app registers again. Not revoked: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/DeviceRowId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDevice'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/system/info:
     get:
       tags: [System]
@@ -811,6 +945,14 @@ components:
       name: user
       in: path
       required: true
+      schema:
+        type: integer
+        minimum: 1
+    DeviceRowId:
+      name: device
+      in: path
+      required: true
+      description: The `id` of a device of this user (not the `device_id` string).
       schema:
         type: integer
         minimum: 1
@@ -1163,6 +1305,40 @@ components:
           description: Required for TERMINAL_ADMIN, TERMINAL_OFFICER and TERMINAL_SUPERVISOR; refused for any other role.
         version:
           type: string
+    UserDevice:
+      type: object
+      required: [id, device_id, platform, app_version, last_seen_at, revoked_at, has_push_token, live_token_count]
+      properties:
+        id:
+          type: integer
+        device_id:
+          type: string
+        platform:
+          type: string
+          enum: [ANDROID, IOS]
+        app_version:
+          type: string
+        last_seen_at:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          nullable: true
+        revoked_at:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          nullable: true
+        has_push_token:
+          type: boolean
+        live_token_count:
+          type: integer
+          description: Tokens that are neither revoked nor expired.
+    RevokeAllResult:
+      type: object
+      required: [devices_revoked, tokens_revoked]
+      properties:
+        devices_revoked:
+          type: integer
+        tokens_revoked:
+          type: integer
     AuditAction:
       type: string
       enum: [CREATE, UPDATE, DELETE, STATUS_CHANGE, SAFETY_EXCEPTION, REJECTED_ATTEMPT]
