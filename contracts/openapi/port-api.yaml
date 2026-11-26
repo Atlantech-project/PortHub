@@ -2631,7 +2631,7 @@ components:
       name: tugMaster
       in: path
       required: true
-      description: The tug master's user id; any other user is 404.
+      description: The tug master's user id. Any other user, or one who no longer holds `TUG_MASTER`, is 404 on writes; unlinking (`tugboat_id` null) stays allowed.
       schema:
         type: integer
         minimum: 1
@@ -2639,7 +2639,7 @@ components:
       name: pilot
       in: path
       required: true
-      description: The pilot's user id; any other user is 404.
+      description: The pilot's user id. Any other user, or one who no longer holds `MARINE_PILOT`, is 404 on writes.
       schema:
         type: integer
         minimum: 1
