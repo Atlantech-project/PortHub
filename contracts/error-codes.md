@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.5 |
+| Version | v1.6 |
 | Status | Approved |
 | Owner | Backend Team |
 | Reviewers | Frontend Team · Mobile Team, critical changes only ([README](README.md)) |
@@ -51,11 +51,25 @@ These are message keys, not codes. They give a more specific message under one o
 | `errors.auth.invalid_credentials` | `UNAUTHENTICATED`, as the text of `detail` | The username or password is incorrect | P1-C1 |
 | `errors.users.cannot_deactivate_self` | `CONFLICT`, as the text of `detail` | A user cannot deactivate their own account | P2-E1 |
 | `errors.users.last_port_admin` | `CONFLICT`, as the text of `detail` | At least one active Port Admin must remain (FR-AC-12) | P2-E1 |
+| `errors.terminals.terminal_inactive` | `CONFLICT`, as the text of `detail` | A terminal-scoped user cannot change an inactive terminal's data | P2-F2 |
+| `errors.berths.terminal_in_use` | `CONFLICT`, as the text of `detail` | A terminal cannot be removed from a berth while safety constraints or recommendations use the pair | P2-F2 |
+| `errors.berths.terminal_inactive` | `VALIDATION_FAILED`, in `errors` | A berth cannot get a new link to an inactive terminal | P2-F2 |
+| `errors.berths.datum_mismatch` | `VALIDATION_FAILED`, in `errors` | The berth depth datum must match the navigation channel's | P2-F2 |
+| `errors.berths.loa_exceeds_length` | `VALIDATION_FAILED`, in `errors` | The maximum vessel LOA cannot be longer than the berth | P2-F2 |
+| `errors.tug_masters.tug_taken` | `VALIDATION_FAILED`, in `errors.tugboat_id` | The tug already has a tug master; one tug master per tug (FR-MD-08) | P2-F3 |
+| `errors.port_shifts.overlap` | `VALIDATION_FAILED`, in `errors.start_time` | The shift overlaps another active shift (back-to-back is allowed) | P2-F3 |
+| `errors.port_shifts.in_use` | `CONFLICT`, as the text of `detail` | Schedule entries dated today or later (port time) use the shift, so its times cannot change and it cannot be deactivated | P2-F3 |
+| `errors.pilot_rank_limits.order` | `VALIDATION_FAILED`, in `errors.max_vessel_loa` | A more senior rank must be allowed at least the LOA of a more junior rank (FIRST ≥ SECOND ≥ THIRD, null = no limit) | P2-F3 |
+| `errors.schedules.past_date` | `VALIDATION_FAILED`, in `errors` (`entries.N.shift_date`, or `shift_date` on delete) | A schedule date before today in port time | P2-F3 |
+| `errors.schedules.person_unavailable` | `VALIDATION_FAILED`, in `errors.entries.N.user_id` | The person is inactive or no longer holds the pilot or tug master role | P2-F3 |
+| `errors.schedules.shift_inactive` | `VALIDATION_FAILED`, in `errors.entries.N.port_shift_id` | The shift is not active | P2-F3 |
+| `errors.schedules.duplicate` | `VALIDATION_FAILED`, in `errors.entries.N.shift_date` | The person is already on this shift on this date, or the entry repeats in the batch | P2-F3 |
 
 ## Change log
 
 | Version | Date | Change |
 | --- | --- | --- |
+| v1.6 | 2026-11-26 | Added the feature keys of P2-F2 (`errors.terminals.*`, `errors.berths.*`, in use on `develop` since PR #76) and P2-F3 (`errors.tug_masters.*`, `errors.port_shifts.*`, `errors.pilot_rank_limits.*`, `errors.schedules.*`). No code, status or existing key changes |
 | v1.5 | 2026-11-21 | Added `CONFLICT` 409 and the keys `errors.users.cannot_deactivate_self`, `errors.users.last_port_admin` (P2-E1). `PLAN_LIMIT_EXCEEDED` is now returned for the active-user limit; the other plan limits stay reserved |
 | v1.4 | 2026-11-06 | `IDEMPOTENCY_KEY_REUSED` also covers another path or method under the same key (IDEMP-01). `SERVICE_UNAVAILABLE` (503, `Retry-After`) is now also returned while the first request with the same key still runs; its row already allowed `Retry-After`. Wording only, code, status and key unchanged |
 | v1.3 | 2026-11-06 | Added `DEVICE_REVOKED` 403, introduced by P1-C3 (DEC-60, CT-04 v1.2) |

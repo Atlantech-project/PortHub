@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.12.0'
+  version: '1.13.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -33,7 +33,9 @@ tags:
   - name: System
     description: Public port information for the mobile app (CT-04).
   - name: Master data
-    description: Terminals and berths for the port set-up (FR-MD-03 to FR-MD-05, DEC-51).
+    description: >-
+      Terminals and berths for the port set-up (FR-MD-03 to FR-MD-05, DEC-51); tugs, tug masters, pilots, rank limits,
+      port shifts and the pilot and tug master schedules (FR-MD-07 to FR-MD-09, P2-F3).
   - name: Users
     description: User administration, roles and devices for the Port Admin (FR-AC-09 to FR-AC-13).
 paths:
@@ -1392,6 +1394,1099 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/tugboats:
+    get:
+      tags: [Master data]
+      operationId: tugboatsList
+      summary: List tugs
+      description: >-
+        The tug fleet (FR-MD-07), ordered by name, each with its tug master or null (a tug without a master is not available
+        to planning, DEC-32). Ability `port-state.read`. Filter: `status`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/TugboatStatus'
+      responses:
+        '200':
+          description: A page of tugs.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tugboat'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: tugboatsCreate
+      summary: Create a tug
+      description: >-
+        Tug Manager (`tug-fleet.manage`). Power is in bollard pull only for now (DEC-20); the status defaults to `AVAILABLE`
+        and is never `BUSY`, which only the Tug Master's tablet sets. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTugboatRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tugboat'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/tugboats/{tugboat}:
+    get:
+      tags: [Master data]
+      operationId: tugboatsShow
+      summary: Show a tug
+      description: The tug with its tug master, or null when it has none.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TugboatId'
+      responses:
+        '200':
+          description: The tug.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tugboat'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    patch:
+      tags: [Master data]
+      operationId: tugboatsUpdate
+      summary: Update a tug
+      description: >-
+        Any field and the tug's `version`. Deactivating a tug is `status: INACTIVE`; the row and its tug master link are
+        kept on every status change. Nothing changed: 200, same `version`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TugboatId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTugboatRequest'
+      responses:
+        '200':
+          description: The tug with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tugboat'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/tug-masters:
+    get:
+      tags: [Master data]
+      operationId: tugMastersList
+      summary: List tug masters
+      description: >-
+        Tug masters with their tug (FR-MD-08), ordered by name. Ability `port-state.read`. Filters: `is_active`, and `q`
+        (part of the name or username).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/IsActiveFilter'
+        - $ref: '#/components/parameters/NameSearch'
+      responses:
+        '200':
+          description: A page of tug masters.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TugMaster'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: tugMastersCreate
+      summary: Create a tug master
+      description: >-
+        Tug Manager (`tug-fleet.manage`). One call creates the user, the `TUG_MASTER` role in Marine Services and the
+        profile, optionally linked to a tug; the role is fixed by the endpoint. The one-time password is returned in this
+        response only. A tug that already has a tug master: 422 with `errors.tug_masters.tug_taken` on `tugboat_id`.
+        Above the plan's user limit: 422 PLAN_LIMIT_EXCEEDED. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTugMasterRequest'
+      responses:
+        '201':
+          description: Created. `one_time_password` is shown once and stored only as a hash.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedTugMaster'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: '422 VALIDATION_FAILED (also `errors.tug_masters.tug_taken`), or 422 PLAN_LIMIT_EXCEEDED.'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/tug-masters/{tugMaster}:
+    get:
+      tags: [Master data]
+      operationId: tugMastersShow
+      summary: Show a tug master
+      description: 404 for a user who is not a tug master.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TugMasterUserId'
+      responses:
+        '200':
+          description: The tug master.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TugMaster'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    patch:
+      tags: [Master data]
+      operationId: tugMastersUpdate
+      summary: Update a tug master
+      description: >-
+        Name and phone, with the tug master's `version` (the profile's, which also moves when only the user changes). The
+        tug is changed with `PUT /tug-masters/{tugMaster}/tugboat`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TugMasterUserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCrewMemberRequest'
+      responses:
+        '200':
+          description: The tug master with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TugMaster'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/tug-masters/{tugMaster}/tugboat:
+    put:
+      tags: [Master data]
+      operationId: tugMastersAssignTugboat
+      summary: Link, move or unlink a tug master's tug
+      description: >-
+        One tug master per tug (FR-MD-08). A tug id links the tug master, or moves them from their current tug, which
+        becomes free in the same write; null unlinks. A tug that already has another tug master: 422 with
+        `errors.tug_masters.tug_taken` on `tugboat_id`. Same tug as now: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TugMasterUserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTugboatRequest'
+      responses:
+        '200':
+          description: The tug master with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TugMaster'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/tug-masters/{tugMaster}/deactivate:
+    post:
+      tags: [Master data]
+      operationId: tugMastersDeactivate
+      summary: Deactivate a tug master
+      description: >-
+        Sets the user inactive and clears the tug link in the same transaction (FR-MD-08); the profile and the schedule
+        rows are kept. Already inactive: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TugMasterUserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The tug master with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TugMaster'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/tug-masters/{tugMaster}/activate:
+    post:
+      tags: [Master data]
+      operationId: tugMastersActivate
+      summary: Activate a tug master
+      description: >-
+        Sets the user active; counts as adding a user for the plan limit (422 PLAN_LIMIT_EXCEEDED). The tug master stays
+        unassigned. Already active: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TugMasterUserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The tug master with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TugMaster'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          description: '422 VALIDATION_FAILED, or 422 PLAN_LIMIT_EXCEEDED when the plan allows no more active users.'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/tug-master-schedules:
+    get:
+      tags: [Master data]
+      operationId: tugMasterSchedulesList
+      summary: List tug master schedule entries
+      description: >-
+        Entries in a port-local date range of at most 62 days, ordered by date, shift start time and id. Ability
+        `port-state.read`. Each entry carries the person's `is_active`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/ScheduleFrom'
+        - $ref: '#/components/parameters/ScheduleTo'
+        - $ref: '#/components/parameters/ScheduleUserId'
+        - $ref: '#/components/parameters/SchedulePortShiftId'
+      responses:
+        '200':
+          description: A page of entries.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShiftScheduleEntry'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: tugMasterSchedulesCreate
+      summary: Add tug master schedule entries
+      description: >-
+        Tug Manager (`tug-fleet.manage`). A batch of up to 100 entries, saved whole or not at all. An entry is refused
+        (422, on `entries.N.*`) when its date is before today in port time (`errors.schedules.past_date`), the person is
+        inactive or no longer a tug master (`errors.schedules.person_unavailable`), the shift is inactive
+        (`errors.schedules.shift_inactive`), or the entry exists or repeats in the batch (`errors.schedules.duplicate`).
+        A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShiftScheduleRequest'
+      responses:
+        '201':
+          description: The saved entries, in the order sent (no `meta`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedShiftScheduleEntries'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/tug-master-schedules/{tugMasterSchedule}:
+    delete:
+      tags: [Master data]
+      operationId: tugMasterSchedulesDelete
+      summary: Remove a tug master schedule entry
+      description: >-
+        An entry dated before today in port time is history and is refused (422 `errors.schedules.past_date` on `shift_date`).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TugMasterScheduleId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '204':
+          description: Removed.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/pilots:
+    get:
+      tags: [Master data]
+      operationId: pilotsList
+      summary: List pilots
+      description: >-
+        The pilot roster (FR-MD-09), ordered by name. Ability `port-state.read`. Filters: `is_active`, `pilot_rank`, and
+        `q` (part of the name or username).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/IsActiveFilter'
+        - $ref: '#/components/parameters/NameSearch'
+        - name: pilot_rank
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PilotRank'
+      responses:
+        '200':
+          description: A page of pilots.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Pilot'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: pilotsCreate
+      summary: Create a pilot
+      description: >-
+        Pilotage Manager (`pilot-roster.manage`). One call creates the user, the `MARINE_PILOT` role in Marine Services and
+        the profile with its rank; the role is fixed by the endpoint. The one-time password is returned in this response
+        only. Above the plan's user limit: 422 PLAN_LIMIT_EXCEEDED. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePilotRequest'
+      responses:
+        '201':
+          description: Created. `one_time_password` is shown once and stored only as a hash.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedPilot'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: '422 VALIDATION_FAILED, or 422 PLAN_LIMIT_EXCEEDED when the plan allows no more active users.'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/pilots/{pilot}:
+    get:
+      tags: [Master data]
+      operationId: pilotsShow
+      summary: Show a pilot
+      description: 404 for a user who is not a pilot.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PilotUserId'
+      responses:
+        '200':
+          description: The pilot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pilot'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    patch:
+      tags: [Master data]
+      operationId: pilotsUpdate
+      summary: Update or promote a pilot
+      description: >-
+        Name, phone and rank (promotion), with the pilot's `version` (the profile's, which also moves when only the user
+        changes).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PilotUserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePilotRequest'
+      responses:
+        '200':
+          description: The pilot with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pilot'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/pilots/{pilot}/deactivate:
+    post:
+      tags: [Master data]
+      operationId: pilotsDeactivate
+      summary: Deactivate a pilot
+      description: >-
+        Sets the user inactive; the profile and the schedule rows are kept. Already inactive: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PilotUserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The pilot with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pilot'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/pilots/{pilot}/activate:
+    post:
+      tags: [Master data]
+      operationId: pilotsActivate
+      summary: Activate a pilot
+      description: >-
+        Sets the user active; counts as adding a user for the plan limit (422 PLAN_LIMIT_EXCEEDED). Already active: 200,
+        nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PilotUserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The pilot with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pilot'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          description: '422 VALIDATION_FAILED, or 422 PLAN_LIMIT_EXCEEDED when the plan allows no more active users.'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/pilot-schedules:
+    get:
+      tags: [Master data]
+      operationId: pilotSchedulesList
+      summary: List pilot schedule entries
+      description: >-
+        Entries in a port-local date range of at most 62 days, ordered by date, shift start time and id. Ability
+        `port-state.read`. Each entry carries the person's `is_active`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/ScheduleFrom'
+        - $ref: '#/components/parameters/ScheduleTo'
+        - $ref: '#/components/parameters/ScheduleUserId'
+        - $ref: '#/components/parameters/SchedulePortShiftId'
+      responses:
+        '200':
+          description: A page of entries.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShiftScheduleEntry'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: pilotSchedulesCreate
+      summary: Add pilot schedule entries
+      description: >-
+        Pilotage Manager (`pilot-roster.manage`). A batch of up to 100 entries, saved whole or not at all. An entry is
+        refused (422, on `entries.N.*`) when its date is before today in port time (`errors.schedules.past_date`), the
+        person is inactive or no longer a pilot (`errors.schedules.person_unavailable`), the shift is inactive
+        (`errors.schedules.shift_inactive`), or the entry exists or repeats in the batch (`errors.schedules.duplicate`).
+        A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShiftScheduleRequest'
+      responses:
+        '201':
+          description: The saved entries, in the order sent (no `meta`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedShiftScheduleEntries'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/pilot-schedules/{pilotSchedule}:
+    delete:
+      tags: [Master data]
+      operationId: pilotSchedulesDelete
+      summary: Remove a pilot schedule entry
+      description: >-
+        An entry dated before today in port time is history and is refused (422 `errors.schedules.past_date` on `shift_date`).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PilotScheduleId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '204':
+          description: Removed.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/pilot-rank-limits:
+    get:
+      tags: [Master data]
+      operationId: pilotRankLimitsList
+      summary: List pilot rank limits
+      description: >-
+        The largest vessel LOA each rank may pilot (FR-MD-09), most senior first. Ability `port-state.read`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: The three ranks.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PilotRankLimit'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/pilot-rank-limits/{pilotRankLimit}:
+    patch:
+      tags: [Master data]
+      operationId: pilotRankLimitsUpdate
+      summary: Change a rank's limit
+      description: >-
+        Pilotage Manager (`pilot-roster.manage`). After the change FIRST ≥ SECOND ≥ THIRD must hold, null (no limit)
+        counting as the largest; otherwise 422 with `errors.pilot_rank_limits.order` on `max_vessel_loa`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: pilotRankLimit
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PilotRank'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePilotRankLimitRequest'
+      responses:
+        '200':
+          description: The limit with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PilotRankLimit'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/port-shifts:
+    get:
+      tags: [Master data]
+      operationId: portShiftsList
+      summary: List port shifts
+      description: >-
+        The fixed port shifts, by start time. Ability `port-state.read`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of shifts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PortShift'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: portShiftsCreate
+      summary: Create a port shift
+      description: >-
+        Port Admin (`port-setup.manage`). Active shifts never overlap (back-to-back is fine; an end before the start means
+        the shift ends the next day): 422 with `errors.port_shifts.overlap` on `start_time`. Equal start and end: 422.
+        A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePortShiftRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortShift'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/port-shifts/{portShift}:
+    patch:
+      tags: [Master data]
+      operationId: portShiftsUpdate
+      summary: Update a port shift
+      description: >-
+        Any field and the shift's `version`. Changing the times, or deactivating the shift, while schedule entries dated
+        today or later (port time) use it is refused: 409 CONFLICT with `errors.port_shifts.in_use`; the code and name can
+        always change. An overlap with another active shift: 422 with `errors.port_shifts.overlap` on `start_time`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PortShiftId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePortShiftRequest'
+      responses:
+        '200':
+          description: The shift with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortShift'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '409 VERSION_CONFLICT (stale `version`) or 409 CONFLICT (`errors.port_shifts.in_use`).'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/system/info:
     get:
       tags: [System]
@@ -1525,6 +2620,93 @@ components:
       schema:
         type: integer
         minimum: 1
+    TugboatId:
+      name: tugboat
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    TugMasterUserId:
+      name: tugMaster
+      in: path
+      required: true
+      description: The tug master's user id. Any other user, or one who no longer holds `TUG_MASTER`, is 404 on writes; unlinking (`tugboat_id` null) stays allowed.
+      schema:
+        type: integer
+        minimum: 1
+    PilotUserId:
+      name: pilot
+      in: path
+      required: true
+      description: The pilot's user id. Any other user, or one who no longer holds `MARINE_PILOT`, is 404 on writes.
+      schema:
+        type: integer
+        minimum: 1
+    PortShiftId:
+      name: portShift
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    PilotScheduleId:
+      name: pilotSchedule
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    TugMasterScheduleId:
+      name: tugMasterSchedule
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    IsActiveFilter:
+      name: is_active
+      in: query
+      required: false
+      schema:
+        type: boolean
+    NameSearch:
+      name: q
+      in: query
+      required: false
+      description: Part of the name or username.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+    ScheduleFrom:
+      name: from
+      in: query
+      required: true
+      description: First port-local date, `YYYY-MM-DD`.
+      schema:
+        type: string
+        format: date
+    ScheduleTo:
+      name: to
+      in: query
+      required: true
+      description: Last port-local date, on or after `from`, less than 62 days later.
+      schema:
+        type: string
+        format: date
+    ScheduleUserId:
+      name: user_id
+      in: query
+      required: false
+      schema:
+        type: integer
+    SchedulePortShiftId:
+      name: port_shift_id
+      in: query
+      required: false
+      schema:
+        type: integer
   headers:
     Allow:
       description: Methods the path supports.
@@ -2210,6 +3392,374 @@ components:
           example: {name: 'Berth 3 East'}
         occurred_at:
           $ref: '#/components/schemas/DateTime'
+    Decimal2:
+      type: string
+      pattern: '^\d+(\.\d{1,2})?$'
+      description: A decimal with up to two places. Returned as a string with two places; sent as a string or a number.
+      example: '60.50'
+    TugboatStatus:
+      type: string
+      enum: [AVAILABLE, BUSY, MAINTENANCE, INACTIVE]
+      description: '`tugboats.status` (CT-21). The Tug Manager sets AVAILABLE, MAINTENANCE or INACTIVE; BUSY comes from the tablet.'
+    TugPowerUnit:
+      type: string
+      enum: [BOLLARD_PULL_TONNES, HP, KW]
+      description: '`tugboats.tug_power_unit` (CT-21). Only BOLLARD_PULL_TONNES is accepted on writes for now (DEC-20).'
+    PilotRank:
+      type: string
+      enum: [FIRST, SECOND, THIRD]
+      description: '`pilot_profiles.pilot_rank` (CT-21). FIRST is the most senior.'
+    Tugboat:
+      type: object
+      required: [id, name, tug_power, tug_power_unit, capacity, status, tug_master, version]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        tug_power:
+          $ref: '#/components/schemas/Decimal2'
+        tug_power_unit:
+          $ref: '#/components/schemas/TugPowerUnit'
+        capacity:
+          allOf:
+            - $ref: '#/components/schemas/Decimal2'
+          nullable: true
+        status:
+          $ref: '#/components/schemas/TugboatStatus'
+        tug_master:
+          type: object
+          nullable: true
+          description: The tug's one tug master, or null.
+          required: [user_id, name, is_active]
+          properties:
+            user_id:
+              type: integer
+            name:
+              type: string
+            is_active:
+              type: boolean
+        version:
+          type: string
+          description: Opaque version token; send it back with every update.
+    CreateTugboatRequest:
+      type: object
+      required: [name, tug_power, tug_power_unit]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Unique.
+        tug_power:
+          $ref: '#/components/schemas/Decimal2'
+        tug_power_unit:
+          type: string
+          enum: [BOLLARD_PULL_TONNES]
+        capacity:
+          allOf:
+            - $ref: '#/components/schemas/Decimal2'
+          nullable: true
+        status:
+          type: string
+          enum: [AVAILABLE, MAINTENANCE, INACTIVE]
+          default: AVAILABLE
+    UpdateTugboatRequest:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
+          description: The tug's `version` as last read.
+        name:
+          type: string
+          maxLength: 100
+        tug_power:
+          $ref: '#/components/schemas/Decimal2'
+        tug_power_unit:
+          type: string
+          enum: [BOLLARD_PULL_TONNES]
+        capacity:
+          allOf:
+            - $ref: '#/components/schemas/Decimal2'
+          nullable: true
+        status:
+          type: string
+          enum: [AVAILABLE, MAINTENANCE, INACTIVE]
+    TugMaster:
+      type: object
+      required: [id, name, username, phone, is_active, tugboat, version]
+      properties:
+        id:
+          type: integer
+          description: The user id.
+        name:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        tugboat:
+          type: object
+          nullable: true
+          description: The linked tug, or null when unassigned.
+          required: [id, name, status]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            status:
+              $ref: '#/components/schemas/TugboatStatus'
+        version:
+          type: string
+          description: Opaque version token of the tug master profile; send it back with every update.
+    CreatedTugMaster:
+      allOf:
+        - $ref: '#/components/schemas/TugMaster'
+        - type: object
+          required: [one_time_password]
+          properties:
+            one_time_password:
+              type: string
+              description: 20 characters, shown in this response only.
+    CreateTugMasterRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateUserRequest'
+        - type: object
+          properties:
+            tugboat_id:
+              type: integer
+              nullable: true
+              description: A tug with no tug master yet.
+    UpdateCrewMemberRequest:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
+          description: The `version` as last read.
+        name:
+          type: string
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 30
+          nullable: true
+    AssignTugboatRequest:
+      type: object
+      required: [version, tugboat_id]
+      properties:
+        version:
+          type: string
+          description: The tug master's `version` as last read.
+        tugboat_id:
+          type: integer
+          nullable: true
+          description: The tug, or null to unassign.
+    Pilot:
+      type: object
+      required: [id, name, username, phone, is_active, pilot_rank, version]
+      properties:
+        id:
+          type: integer
+          description: The user id.
+        name:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        pilot_rank:
+          $ref: '#/components/schemas/PilotRank'
+        version:
+          type: string
+          description: Opaque version token of the pilot profile; send it back with every update.
+    CreatedPilot:
+      allOf:
+        - $ref: '#/components/schemas/Pilot'
+        - type: object
+          required: [one_time_password]
+          properties:
+            one_time_password:
+              type: string
+              description: 20 characters, shown in this response only.
+    CreatePilotRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateUserRequest'
+        - type: object
+          required: [pilot_rank]
+          properties:
+            pilot_rank:
+              $ref: '#/components/schemas/PilotRank'
+    UpdatePilotRequest:
+      allOf:
+        - $ref: '#/components/schemas/UpdateCrewMemberRequest'
+        - type: object
+          properties:
+            pilot_rank:
+              $ref: '#/components/schemas/PilotRank'
+    PilotRankLimit:
+      type: object
+      required: [pilot_rank, max_vessel_loa, version]
+      properties:
+        pilot_rank:
+          $ref: '#/components/schemas/PilotRank'
+        max_vessel_loa:
+          allOf:
+            - $ref: '#/components/schemas/Decimal2'
+          nullable: true
+          description: Largest vessel LOA in metres this rank may pilot; null for no limit.
+        version:
+          type: string
+          description: Opaque version token; send it back with every update.
+    UpdatePilotRankLimitRequest:
+      type: object
+      required: [version, max_vessel_loa]
+      properties:
+        version:
+          type: string
+          description: The limit's `version` as last read.
+        max_vessel_loa:
+          allOf:
+            - $ref: '#/components/schemas/Decimal2'
+          nullable: true
+          description: Greater than 0 and at most 99999.99, or null for no limit.
+    PortShift:
+      type: object
+      required: [id, code, name, start_time, end_time, ends_next_day, is_active, version]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        start_time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          description: Port local time, `HH:MM`.
+          example: '22:00'
+        end_time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          description: Port local time, `HH:MM`; before `start_time` when the shift ends the next day.
+          example: '06:00'
+        ends_next_day:
+          type: boolean
+        is_active:
+          type: boolean
+        version:
+          type: string
+          description: Opaque version token; send it back with every update.
+    CreatePortShiftRequest:
+      type: object
+      required: [code, name, start_time, end_time]
+      properties:
+        code:
+          type: string
+          maxLength: 20
+          description: Unique.
+        name:
+          type: string
+          maxLength: 60
+        start_time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+        end_time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+          description: Different from `start_time`.
+        is_active:
+          type: boolean
+          default: true
+    UpdatePortShiftRequest:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
+          description: The shift's `version` as last read.
+        code:
+          type: string
+          maxLength: 20
+        name:
+          type: string
+          maxLength: 60
+        start_time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+        end_time:
+          type: string
+          pattern: '^([01]\d|2[0-3]):[0-5]\d$'
+        is_active:
+          type: boolean
+    ShiftScheduleEntry:
+      type: object
+      required: [id, user_id, name, is_active, shift_date, port_shift]
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        name:
+          type: string
+        is_active:
+          type: boolean
+          description: Whether the person is active now; entries of a deactivated person are kept.
+        shift_date:
+          type: string
+          format: date
+          description: Port-local date the shift starts on.
+        port_shift:
+          type: object
+          required: [id, code, start_time, end_time]
+          properties:
+            id:
+              type: integer
+            code:
+              type: string
+            start_time:
+              type: string
+              example: '08:00'
+            end_time:
+              type: string
+              example: '16:00'
+    CreateShiftScheduleRequest:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [user_id, shift_date, port_shift_id]
+            properties:
+              user_id:
+                type: integer
+                description: A pilot (on `/pilot-schedules`) or a tug master (on `/tug-master-schedules`).
+              shift_date:
+                type: string
+                format: date
+                description: Port-local date, today or later.
+              port_shift_id:
+                type: integer
+    CreatedShiftScheduleEntries:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftScheduleEntry'
   responses:
     Conflict:
       description: '409 CONFLICT. A business rule refused the change; `message_key` of the feature is in `detail` only.'
