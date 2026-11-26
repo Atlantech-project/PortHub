@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.8.0'
+  version: '1.11.1'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -32,6 +32,8 @@ tags:
     description: Audit log browsing for the Port Admin (FR-MD-16).
   - name: System
     description: Public port information for the mobile app (CT-04).
+  - name: Users
+    description: User administration, roles and devices for the Port Admin (FR-AC-09 to FR-AC-13).
 paths:
   /api/v1/auth/login:
     post:
@@ -406,6 +408,451 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users:
+    get:
+      tags: [Users]
+      operationId: usersList
+      summary: List users
+      description: >-
+        Users for the Port Admin (`PORT_GM`, ability `users.manage`), ordered by name. Filters: `is_active`, and `q` (part of the name or username).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: is_active
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        '200':
+          description: A page of users.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Users]
+      operationId: usersCreate
+      summary: Create a user
+      description: >-
+        Creates an active user with a server-generated one-time password, returned in this response only (`one_time_password`);
+        the user must change it at first sign-in. Refused with 422 PLAN_LIMIT_EXCEEDED above the plan's user limit. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Created. `one_time_password` is shown once and stored only as a hash.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedUser'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: '422 VALIDATION_FAILED, or 422 PLAN_LIMIT_EXCEEDED when the plan allows no more active users.'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}:
+    get:
+      tags: [Users]
+      operationId: usersShow
+      summary: Show a user with the role history
+      description: >-
+        The user with the active role and every role assignment, newest first (DEC-36).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: The user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/deactivate:
+    post:
+      tags: [Users]
+      operationId: usersDeactivate
+      summary: Deactivate a user
+      description: >-
+        Sets `is_active` to false under a row lock; the user is refused on the next request. Nobody can deactivate themselves or the last active Port Admin (409 CONFLICT). Already inactive: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The user with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '409 VERSION_CONFLICT (stale `version`) or 409 CONFLICT (a business rule: yourself, the last active Port Admin).'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/activate:
+    post:
+      tags: [Users]
+      operationId: usersActivate
+      summary: Activate a user
+      description: >-
+        Sets `is_active` to true; counts as adding a user for the plan limit (422 PLAN_LIMIT_EXCEEDED). Already active: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The user with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          description: '422 VALIDATION_FAILED, or 422 PLAN_LIMIT_EXCEEDED when the plan allows no more active users.'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ValidationProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/roles:
+    post:
+      tags: [Users]
+      operationId: usersAssignRole
+      summary: Give a user a role
+      description: >-
+        Ends the user's active role and inserts the new one in one transaction (DEC-36). `terminal_id` is required for the three `TERMINAL_*` roles and refused for any other. Replacing the last active Port Admin role is 409 CONFLICT. The same role and unit again: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRoleRequest'
+      responses:
+        '200':
+          description: The user with the active role, the history and the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '409 VERSION_CONFLICT (stale `version`) or 409 CONFLICT (the last active Port Admin).'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/roles/end:
+    post:
+      tags: [Users]
+      operationId: usersEndRole
+      summary: End a user's role
+      description: >-
+        Sets `active_to` on the active role; the user is left without a role (403 on every request). Ending the last active Port Admin role is 409 CONFLICT. No active role: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The user with the history and the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '409 VERSION_CONFLICT (stale `version`) or 409 CONFLICT (the last active Port Admin).'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/devices:
+    get:
+      tags: [Users]
+      operationId: userDevicesList
+      summary: List a user's devices
+      description: >-
+        The mobile devices of the user (ability `devices.manage`), newest first. The push token is never returned.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of devices.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserDevice'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/devices/revoke-all:
+    post:
+      tags: [Users]
+      operationId: userDevicesRevokeAll
+      summary: Revoke all of a user's devices
+      description: >-
+        Revokes every device of the user that is not revoked yet and all their live tokens. Web sessions are not touched. A user with no devices: 200 with zeros.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The counts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeAllResult'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/devices/{device}/revoke:
+    post:
+      tags: [Users]
+      operationId: userDevicesRevoke
+      summary: Revoke one device
+      description: >-
+        Sets `revoked_at`, clears the push registration and revokes the device's live tokens. The device's next request is 401 and a new sign-in is 403 DEVICE_REVOKED. Revoking again: 200, nothing changes. A device of another user: 404.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/DeviceRowId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The revoked device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDevice'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/users/{user}/devices/{device}/restore:
+    post:
+      tags: [Users]
+      operationId: userDevicesRestore
+      summary: Restore a revoked device
+      description: >-
+        Clears `revoked_at`, so the device can sign in again. Tokens revoked with the device stay revoked and the push registration stays empty until the app registers again. Not revoked: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/DeviceRowId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The device.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDevice'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/system/info:
     get:
       tags: [System]
@@ -510,6 +957,21 @@ components:
       schema:
         type: string
         format: uuid
+    UserId:
+      name: user
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    DeviceRowId:
+      name: device
+      in: path
+      required: true
+      description: The `id` of a device of this user (not the `device_id` string).
+      schema:
+        type: integer
+        minimum: 1
   headers:
     Allow:
       description: Methods the path supports.
@@ -574,6 +1036,7 @@ components:
         - SERVICE_UNAVAILABLE
         - SERVER_ERROR
         - BAD_REQUEST
+        - CONFLICT
     Problem:
       type: object
       description: RFC 9457 problem body. `detail` is English; clients translate by `message_key`.
@@ -754,6 +1217,144 @@ components:
         must_change_password:
           type: boolean
           example: false
+    RoleAssignment:
+      type: object
+      required: [role, organization_unit_id, unit_type, terminal_id, active_from, active_to]
+      properties:
+        role:
+          type: string
+          enum: [PORT_GM, PORT_STAFF, MARINE_SAFETY_OFFICER, PILOTAGE_MANAGER, PILOTAGE_OFFICER, MARINE_PILOT, TUG_MANAGER, TUG_OFFICER, TUG_MASTER, TERMINAL_ADMIN, TERMINAL_OFFICER, TERMINAL_SUPERVISOR]
+        organization_unit_id:
+          type: integer
+        unit_type:
+          type: string
+          enum: [HARBOUR_AUTHORITY, MARINE_SERVICES, TERMINAL]
+        terminal_id:
+          type: integer
+          nullable: true
+        active_from:
+          $ref: '#/components/schemas/DateTime'
+        active_to:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          nullable: true
+    User:
+      type: object
+      required: [id, name, username, phone, is_active, must_change_password, version, created_at, active_role]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+        must_change_password:
+          type: boolean
+        version:
+          type: string
+          description: Opaque version token; send it back with every update.
+        created_at:
+          $ref: '#/components/schemas/DateTime'
+        active_role:
+          allOf:
+            - $ref: '#/components/schemas/RoleAssignment'
+          nullable: true
+    UserDetail:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          required: [role_history]
+          properties:
+            role_history:
+              type: array
+              description: Every assignment, newest first.
+              items:
+                $ref: '#/components/schemas/RoleAssignment'
+    CreatedUser:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          required: [one_time_password]
+          properties:
+            one_time_password:
+              type: string
+              description: 20 characters, shown in this response only.
+    CreateUserRequest:
+      type: object
+      required: [name, username]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-z0-9._-]+$'
+          description: Lowercased by the server; unique.
+        phone:
+          type: string
+          maxLength: 30
+          nullable: true
+    VersionRequest:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
+          description: The user's `version` as last read.
+    AssignRoleRequest:
+      type: object
+      required: [role, version]
+      properties:
+        role:
+          type: string
+          enum: [PORT_GM, PORT_STAFF, MARINE_SAFETY_OFFICER, PILOTAGE_MANAGER, PILOTAGE_OFFICER, MARINE_PILOT, TUG_MANAGER, TUG_OFFICER, TUG_MASTER, TERMINAL_ADMIN, TERMINAL_OFFICER, TERMINAL_SUPERVISOR]
+        terminal_id:
+          type: integer
+          minimum: 1
+          description: Required for TERMINAL_ADMIN, TERMINAL_OFFICER and TERMINAL_SUPERVISOR; refused for any other role.
+        version:
+          type: string
+    UserDevice:
+      type: object
+      required: [id, device_id, platform, app_version, last_seen_at, revoked_at, has_push_token, live_token_count]
+      properties:
+        id:
+          type: integer
+        device_id:
+          type: string
+        platform:
+          type: string
+          enum: [ANDROID, IOS]
+        app_version:
+          type: string
+        last_seen_at:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          nullable: true
+        revoked_at:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          nullable: true
+        has_push_token:
+          type: boolean
+        live_token_count:
+          type: integer
+          description: Tokens that are neither revoked nor expired.
+    RevokeAllResult:
+      type: object
+      required: [devices_revoked, tokens_revoked]
+      properties:
+        devices_revoked:
+          type: integer
+        tokens_revoked:
+          type: integer
     AuditAction:
       type: string
       enum: [CREATE, UPDATE, DELETE, STATUS_CHANGE, SAFETY_EXCEPTION, REJECTED_ATTEMPT]
@@ -802,6 +1403,19 @@ components:
         occurred_at:
           $ref: '#/components/schemas/DateTime'
   responses:
+    Conflict:
+      description: '409 CONFLICT. A business rule refused the change; `message_key` of the feature is in `detail` only.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://atlantech.io/errors/conflict
+            title: 'Conflict'
+            status: 409
+            code: CONFLICT
+            message_key: errors.conflict
+            detail: 'At least one active Port Admin must remain.'
     ValidationFailed:
       description: '422 VALIDATION_FAILED'
       content:
