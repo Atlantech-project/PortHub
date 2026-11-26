@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.0 |
+| Version | v1.1 |
 | Status | Draft: for review by Frontend and QA |
 | Owner | Backend Team |
 | Reviewers | Frontend Team (FE-021, FE-022), QA (FE-102) |
@@ -16,7 +16,7 @@ Who may do what on the port API. A user holds one active role at a time (DEC-36)
 
 | Ability | `PORT_GM` | `PORT_STAFF` | `MARINE_SAFETY_OFFICER` | `PILOTAGE_MANAGER` | `PILOTAGE_OFFICER` | `MARINE_PILOT` | `TUG_MANAGER` | `TUG_OFFICER` | `TUG_MASTER` | `TERMINAL_ADMIN` | `TERMINAL_OFFICER` | `TERMINAL_SUPERVISOR` |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `port-state.read` | yes | yes |  | yes | yes |  | yes | yes |  | yes | yes |  |
+| `port-state.read` | yes | yes | yes | yes | yes |  | yes | yes |  | yes | yes |  |
 | `users.manage` | yes |  |  |  |  |  |  |  |  |  |  |  |
 | `devices.manage` | yes |  |  |  |  |  |  |  |  |  |  |  |
 | `audit.read` | yes |  |  |  |  |  |  |  |  |  |  |  |
@@ -24,6 +24,7 @@ Who may do what on the port API. A user holds one active role at a time (DEC-36)
 | `ai-model.review` | yes |  |  |  |  |  |  |  |  |  |  |  |
 | `plans.safety-exception` | yes |  |  |  |  |  |  |  |  |  |  |  |
 | `port-setup.manage` | yes |  |  |  |  |  |  |  |  |  |  |  |
+| `safety-constraints.manage` |  |  | yes |  |  |  |  |  |  |  |  |  |
 | `pilot-roster.manage` |  |  |  | yes |  |  |  |  |  |  |  |  |
 | `pilotage.assign` |  |  |  |  | yes |  |  |  |  |  |  |  |
 | `tug-fleet.manage` |  |  |  |  |  |  | yes |  |  |  |  |  |
@@ -48,7 +49,7 @@ Who may do what on the port API. A user holds one active role at a time (DEC-36)
 
 - `PORT_GM`: `port-state.read`, `users.manage`, `devices.manage`, `audit.read`, `license.manage`, `ai-model.review`, `plans.safety-exception`, `port-setup.manage`
 - `PORT_STAFF`: `port-state.read`, `berthing-requests.manage`, `baplie.manage`, `entry-window.decide`, `environment.manual-entry`, `recommendations.review`, `plans.confirm`, `plans.cancel`, `deviations.review`
-- `MARINE_SAFETY_OFFICER`: none
+- `MARINE_SAFETY_OFFICER`: `port-state.read`, `safety-constraints.manage`
 - `PILOTAGE_MANAGER`: `port-state.read`, `pilot-roster.manage`
 - `PILOTAGE_OFFICER`: `port-state.read`, `pilotage.assign`
 - `MARINE_PILOT`: `tasks.own.read`, `tasks.own.update`
@@ -64,7 +65,7 @@ Who may do what on the port API. A user holds one active role at a time (DEC-36)
 - **Open to every signed-in user:** `auth/me`, `auth/change-password`, `auth/logout` (and sign-in). A user with no active role gets 200 on these and 403 everywhere else.
 - **Terminal scope:** `TERMINAL_ADMIN`, `TERMINAL_OFFICER`, `TERMINAL_SUPERVISOR` act only on their own terminal. Another terminal's record answers `403 FORBIDDEN`, not 404. All other roles are port-wide.
 - **Field roles:** `MARINE_PILOT`, `TUG_MASTER`, `TERMINAL_SUPERVISOR` hold only the own-task abilities (the supervisor also `terminal-status.update`) and no web ability: on the web they get 403 on everything else (DEC-48, P-20 "use the mobile app"). They reach only components assigned to them; another user's task answers `403 FORBIDDEN`.
-- **`MARINE_SAFETY_OFFICER`** holds no ability until the Non-Container work starts.
+- **`MARINE_SAFETY_OFFICER`** is port-wide: the safety constraints, environmental limits, UKC parameters and tide set activation (FR-MD-14). The navigation channel, its depth datum included, stays with the Port Admin (`port-setup.manage`, FR-MD-02).
 - **Check order (FR-GL-01):** 401, then the password gate, then role and terminal scope (403), then the other checks.
 - **Terminal type** (equipment and yard for container terminals only) is checked by the endpoint, not by this matrix.
 - Every refused role, terminal or own-task check is audited as `REJECTED_ATTEMPT` (FR-GL-02).
@@ -74,3 +75,4 @@ Who may do what on the port API. A user holds one active role at a time (DEC-36)
 | Version | Date | Change |
 | --- | --- | --- |
 | v1.0 | 2026-11-03 | First version: 12 roles, 27 abilities (P2-D1). `MARINE_SAFETY_OFFICER` and `storage.manage` wait for the Non-Container work. |
+| v1.1 | 2026-11-26 | 28 abilities. `MARINE_SAFETY_OFFICER` is port-wide (FRD v3, FR-MD-14; P2-D1 Q7 reversed by the lead): `port-state.read` and the new `safety-constraints.manage` (safety constraints, environmental limits, UKC parameters, tide set activation, P2-F5). `storage.manage` still waits for the Non-Container work. |
