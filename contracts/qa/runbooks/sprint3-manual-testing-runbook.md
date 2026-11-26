@@ -222,7 +222,7 @@ This runbook defines the step-by-step manual test procedures for verifying the S
 - Objective: Confirm that deactivating a Tug Master user atomically unbinds their assigned tugboat in the same database transaction.
 - Verification Steps:
   1. Verify in database: `SELECT user_id, assigned_tugboat_id FROM tug_master_profiles WHERE user_id = 12;` (Assigned to Tug 2).
-  2. From Admin Web UI or API, execute deactivation: `PATCH /api/v1/users/12/deactivate`.
+  2. From Admin Web UI or API, execute deactivation: `POST /api/v1/users/12/deactivate` with `{"version": "<current_version>"}`.
   3. Query database immediately:
      ```sql
      SELECT id, is_active FROM users WHERE id = 12;
