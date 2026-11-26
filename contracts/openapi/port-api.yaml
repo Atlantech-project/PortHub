@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.11.1'
+  version: '1.12.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -32,6 +32,8 @@ tags:
     description: Audit log browsing for the Port Admin (FR-MD-16).
   - name: System
     description: Public port information for the mobile app (CT-04).
+  - name: Master data
+    description: Terminals and berths for the port set-up (FR-MD-03 to FR-MD-05, DEC-51).
   - name: Users
     description: User administration, roles and devices for the Port Admin (FR-AC-09 to FR-AC-13).
 paths:
@@ -853,6 +855,543 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals:
+    get:
+      tags: [Master data]
+      operationId: terminalsList
+      summary: List terminals
+      description: >-
+        Terminals ordered by code (ability `port-state.read`). A terminal-scoped role (`TERMINAL_ADMIN`, `TERMINAL_OFFICER`)
+        sees only its own terminal. Filters: `terminal_type`, `is_active`, and `q` (part of the code or name).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: terminal_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [CONTAINER, NON_CONTAINER]
+        - name: is_active
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        '200':
+          description: A page of terminals with `berths_count`, without the berth list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Terminal'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: terminalsCreate
+      summary: Create a terminal
+      description: >-
+        Port Admin only (ability `port-setup.manage`). Creates the terminal and its TERMINAL organization unit in one
+        transaction (FR-MD-03). `code` and `terminal_type` cannot change later. Whether the boundary lies inside the port
+        boundary is not checked yet (known gap). A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTerminalRequest'
+      responses:
+        '201':
+          description: Created, with `berths` (empty).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminalDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}:
+    get:
+      tags: [Master data]
+      operationId: terminalsShow
+      summary: Show a terminal with its berths
+      description: >-
+        A terminal-scoped role gets 403 for another terminal (`terminal.scope`).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+      responses:
+        '200':
+          description: The terminal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminalDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    put:
+      tags: [Master data]
+      operationId: terminalsUpdate
+      summary: Update a terminal
+      description: >-
+        Changes `name` and `boundary_coordinates`; a field that is not sent keeps its value. Sending `code`, `terminal_type`
+        or `is_active` is 422 (`validation.prohibited`). A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTerminalRequest'
+      responses:
+        '200':
+          description: The terminal with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminalDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/deactivate:
+    post:
+      tags: [Master data]
+      operationId: terminalsDeactivate
+      summary: Deactivate a terminal
+      description: >-
+        Sets `is_active` to false (FR-MD-05). Its berths, roles and requests are not changed; every linked berth is announced
+        to the engine. A terminal-scoped role can still read the terminal but not write inside it (409 CONFLICT). Already
+        inactive: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The terminal with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminalDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/activate:
+    post:
+      tags: [Master data]
+      operationId: terminalsActivate
+      summary: Activate a terminal
+      description: >-
+        Sets `is_active` to true; every linked berth is announced to the engine. Already active: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The terminal with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TerminalDetail'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/berths:
+    get:
+      tags: [Master data]
+      operationId: berthsList
+      summary: List berths
+      description: >-
+        Berths ordered by code, each with its terminals (ability `port-state.read`). A terminal-scoped role sees only the
+        berths linked to its terminal, shared berths included (DEC-51); `terminal_id` of another terminal is 403. Filters:
+        `status`, `terminal_id`, and `q` (part of the code or name).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ACTIVE, MAINTENANCE, INACTIVE]
+        - name: terminal_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        '200':
+          description: A page of berths.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Berth'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: berthsCreate
+      summary: Create a berth
+      description: >-
+        Port Admin only (FR-MD-04). `max_vessel_loa` must not exceed `length`; at least one terminal, and a new link must be
+        to an active terminal (`errors.berths.terminal_inactive`); `depth_datum` must equal every active navigation channel's
+        (`errors.berths.datum_mismatch`). Several terminals make a shared berth (DEC-51). A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBerthRequest'
+      responses:
+        '201':
+          description: Created, with its terminals.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Berth'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/berths/{berth}:
+    get:
+      tags: [Master data]
+      operationId: berthsShow
+      summary: Show a berth with its terminals
+      description: >-
+        A terminal-scoped role gets 403 for a berth not linked to its terminal.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BerthId'
+      responses:
+        '200':
+          description: The berth.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Berth'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    put:
+      tags: [Master data]
+      operationId: berthsUpdate
+      summary: Update a berth
+      description: >-
+        A field that is not sent keeps its value; a sent `terminal_ids` replaces the list. A `max_vessel_loa` sent alone is
+        compared with the stored `length` (`errors.berths.loa_exceeds_length`). Removing a terminal that a safety constraint or
+        recommendation option still uses is 409 CONFLICT (`errors.berths.terminal_in_use`). Existing links to a terminal that
+        became inactive stay valid. Sending `code` or `status` is 422 (`validation.prohibited`). A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BerthId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBerthRequest'
+      responses:
+        '200':
+          description: The berth with the new `version` (it also moves when only the terminals change).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Berth'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '409 VERSION_CONFLICT (stale `version`) or 409 CONFLICT (a removed terminal is still in use).'
+          content:
+            application/problem+json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/berths/{berth}/deactivate:
+    post:
+      tags: [Master data]
+      operationId: berthsDeactivate
+      summary: Deactivate a berth
+      description: >-
+        Sets `status` to INACTIVE (FR-MD-05). The change is announced to the engine. Already in that status: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BerthId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The berth with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Berth'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/berths/{berth}/activate:
+    post:
+      tags: [Master data]
+      operationId: berthsActivate
+      summary: Activate a berth
+      description: >-
+        Sets `status` to ACTIVE. The change is announced to the engine. Already in that status: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BerthId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The berth with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Berth'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/berths/{berth}/maintenance:
+    post:
+      tags: [Master data]
+      operationId: berthsMaintenance
+      summary: Put a berth under maintenance
+      description: >-
+        Sets `status` to MAINTENANCE. The change is announced to the engine. Already in that status: 200, nothing changes.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BerthId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The berth with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Berth'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/system/info:
     get:
       tags: [System]
@@ -959,6 +1498,20 @@ components:
         format: uuid
     UserId:
       name: user
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    TerminalId:
+      name: terminal
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    BerthId:
+      name: berth
       in: path
       required: true
       schema:
@@ -1307,7 +1860,7 @@ components:
       properties:
         version:
           type: string
-          description: The user's `version` as last read.
+          description: The record's `version` as last read.
     AssignRoleRequest:
       type: object
       required: [role, version]
@@ -1355,6 +1908,261 @@ components:
           type: integer
         tokens_revoked:
           type: integer
+    GeoJsonPolygon:
+      type: object
+      description: >-
+        A GeoJSON Polygon with `[longitude, latitude]` positions; every ring has at least four positions and is closed (the
+        first position equals the last).
+      required: [type, coordinates]
+      properties:
+        type:
+          type: string
+          enum: [Polygon]
+        coordinates:
+          type: array
+          minItems: 1
+          items:
+            type: array
+            minItems: 4
+            items:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                type: number
+    TerminalType:
+      type: string
+      enum: [CONTAINER, NON_CONTAINER]
+    BerthStatus:
+      type: string
+      description: Administrative status only; reserved or occupied comes from the plans.
+      enum: [ACTIVE, MAINTENANCE, INACTIVE]
+    Terminal:
+      type: object
+      required: [id, code, name, terminal_type, boundary_coordinates, is_active, version]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          maxLength: 20
+        name:
+          type: string
+          maxLength: 120
+        terminal_type:
+          $ref: '#/components/schemas/TerminalType'
+        boundary_coordinates:
+          allOf:
+            - $ref: '#/components/schemas/GeoJsonPolygon'
+          nullable: true
+        is_active:
+          type: boolean
+        version:
+          type: string
+          description: Opaque version token; send it back with every update.
+        berths_count:
+          type: integer
+          description: In the list only. How many berths the terminal may use (a shared berth counts for each of its terminals).
+    TerminalDetail:
+      allOf:
+        - $ref: '#/components/schemas/Terminal'
+        - type: object
+          required: [berths]
+          properties:
+            berths:
+              type: array
+              items:
+                type: object
+                required: [id, code, name, status]
+                properties:
+                  id:
+                    type: integer
+                  code:
+                    type: string
+                  name:
+                    type: string
+                    nullable: true
+                  status:
+                    $ref: '#/components/schemas/BerthStatus'
+    Berth:
+      type: object
+      required: [id, code, name, length, water_depth, depth_datum, max_vessel_loa, status, latitude, longitude, version, terminals]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          nullable: true
+        length:
+          type: number
+          description: Metres.
+        water_depth:
+          type: number
+          description: Metres below `depth_datum`.
+        depth_datum:
+          type: string
+          example: LAT
+        max_vessel_loa:
+          type: number
+          description: Metres; never more than `length`.
+        status:
+          $ref: '#/components/schemas/BerthStatus'
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        version:
+          type: string
+          description: Opaque version token; send it back with every update.
+        terminals:
+          type: array
+          description: The terminals that may use the berth; more than one for a shared berth (DEC-51).
+          items:
+            type: object
+            required: [id, code, name, terminal_type, is_active]
+            properties:
+              id:
+                type: integer
+              code:
+                type: string
+              name:
+                type: string
+              terminal_type:
+                $ref: '#/components/schemas/TerminalType'
+              is_active:
+                type: boolean
+    CreateTerminalRequest:
+      type: object
+      required: [code, name, terminal_type]
+      properties:
+        code:
+          type: string
+          maxLength: 20
+        name:
+          type: string
+          maxLength: 120
+        terminal_type:
+          $ref: '#/components/schemas/TerminalType'
+        boundary_coordinates:
+          allOf:
+            - $ref: '#/components/schemas/GeoJsonPolygon'
+          nullable: true
+    UpdateTerminalRequest:
+      type: object
+      required: [version]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        boundary_coordinates:
+          allOf:
+            - $ref: '#/components/schemas/GeoJsonPolygon'
+          nullable: true
+        version:
+          type: string
+          description: The terminal's `version` as last read.
+    CreateBerthRequest:
+      type: object
+      required: [code, length, water_depth, depth_datum, max_vessel_loa, terminal_ids]
+      properties:
+        code:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 80
+          nullable: true
+        length:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 99999.99
+          multipleOf: 0.01
+        water_depth:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999.99
+          multipleOf: 0.01
+        depth_datum:
+          type: string
+          maxLength: 40
+        max_vessel_loa:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 99999.99
+          multipleOf: 0.01
+          description: Must not exceed `length`.
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+          nullable: true
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+          nullable: true
+        terminal_ids:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: integer
+    UpdateBerthRequest:
+      type: object
+      required: [version]
+      properties:
+        name:
+          type: string
+          maxLength: 80
+          nullable: true
+        length:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 99999.99
+          multipleOf: 0.01
+        water_depth:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999.99
+          multipleOf: 0.01
+        depth_datum:
+          type: string
+          maxLength: 40
+        max_vessel_loa:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 99999.99
+          multipleOf: 0.01
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+          nullable: true
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+          nullable: true
+        terminal_ids:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: integer
+        version:
+          type: string
+          description: The berth's `version` as last read.
     AuditAction:
       type: string
       enum: [CREATE, UPDATE, DELETE, STATUS_CHANGE, SAFETY_EXCEPTION, REJECTED_ATTEMPT]
