@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.12.0'
+  version: '1.15.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -1412,6 +1412,83 @@ paths:
                 $ref: '#/components/schemas/SystemInfo'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/vessels/{vessel}:
+    get:
+      tags: [Master data]
+      operationId: vesselsShow
+      summary: Get a vessel's particulars
+      description: The particulars and the `version` needed to edit them (P-33).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: vessel
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The vessel.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vessel'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    put:
+      tags: [Master data]
+      operationId: vesselsUpdate
+      summary: Edit a vessel's particulars
+      description: >-
+        Port Authority Staff change any particular; a field that is not sent keeps its value. `imo_number` is never edited
+        (422). `call_sign` and `flag_state` are accepted only while empty (the BAPLIE worker fills them too); sending the
+        stored value again changes nothing, any other value is 422 `errors.vessels.already_set`. A `beam` not below `loa`
+        is 422 `errors.vessels.beam_not_below_loa`. 409 is a stale `version`. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: vessel
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVesselRequest'
+      responses:
+        '200':
+          description: The vessel with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vessel'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
 components:
   securitySchemes:
     cookieAuth:
@@ -1713,6 +1790,105 @@ components:
           example: '2026-12-02T10:00:00.000000Z'
         user:
           $ref: '#/components/schemas/UserProfile'
+    Vessel:
+      type: object
+      required: [id, imo_number, name, vessel_type_id, vessel_type, loa, beam, max_draft, net_tonnage, moulded_depth, call_sign, flag_state, version]
+      properties:
+        id:
+          type: integer
+        imo_number:
+          type: string
+          example: '9839430'
+        vessel_type:
+          type: object
+          required: [id, code, name]
+          properties:
+            id:
+              type: integer
+            code:
+              type: string
+            name:
+              type: string
+        name:
+          type: string
+          maxLength: 120
+        vessel_type_id:
+          type: integer
+        loa:
+          type: number
+          description: Length overall in metres, above 0, at most 2 decimals.
+          example: 300
+        beam:
+          type: number
+          description: Breadth in metres, above 0 and below `loa`.
+          example: 40
+        max_draft:
+          type: number
+          description: Summer draught in metres, above 0.
+          example: 14.5
+        net_tonnage:
+          type: integer
+          nullable: true
+          minimum: 1
+        moulded_depth:
+          type: number
+          nullable: true
+          description: Metres, above 0.
+        call_sign:
+          type: string
+          nullable: true
+          maxLength: 10
+        flag_state:
+          type: string
+          nullable: true
+          pattern: '^[A-Z]{2}$'
+          description: ISO 3166-1 alpha-2.
+          example: EG
+        version:
+          type: string
+          example: '2026-11-27T10:15:04.123456Z'
+    UpdateVesselRequest:
+      type: object
+      required: [version]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        vessel_type_id:
+          type: integer
+        loa:
+          type: number
+          description: Length overall in metres, above 0, at most 2 decimals.
+          example: 300
+        beam:
+          type: number
+          description: Breadth in metres, above 0 and below `loa`.
+          example: 40
+        max_draft:
+          type: number
+          description: Summer draught in metres, above 0.
+          example: 14.5
+        net_tonnage:
+          type: integer
+          nullable: true
+          minimum: 1
+        moulded_depth:
+          type: number
+          nullable: true
+          description: Metres, above 0.
+        call_sign:
+          type: string
+          nullable: true
+          maxLength: 10
+        flag_state:
+          type: string
+          nullable: true
+          pattern: '^[A-Z]{2}$'
+          description: ISO 3166-1 alpha-2.
+          example: EG
+        version:
+          type: string
+          description: The `version` last read.
     SystemInfo:
       type: object
       description: Public port information (CT-04 v1.1).
