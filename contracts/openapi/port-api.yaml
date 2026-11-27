@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.12.0'
+  version: '1.14.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -1412,6 +1412,534 @@ paths:
                 $ref: '#/components/schemas/SystemInfo'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/port-profile:
+    get:
+      tags: [Master data]
+      operationId: portProfileShow
+      summary: Show the port profile
+      description: The port's profile (P-26). 503 while the port is not provisioned yet.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The port profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortProfile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/port-profile/{portProfile}:
+    put:
+      tags: [Master data]
+      operationId: portProfileUpdate
+      summary: Update the port profile
+      description: >-
+        The Port Admin changes `name`, `latitude`, `longitude`, `timezone` and `boundary_coordinates`; a field that is not
+        sent keeps its value. `id`, `public_id`, `port_code` and `governorate_code` come from the SaaS registry and are 422.
+        There is one profile: the path takes the `id` of the GET answer, any other is 404. A Bearer request needs an
+        `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: portProfile
+          in: path
+          required: true
+          description: The profile's `id` (1).
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePortProfileRequest'
+      responses:
+        '200':
+          description: The profile with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortProfile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/navigation-channels:
+    get:
+      tags: [Master data]
+      operationId: navigationChannelsList
+      summary: List navigation channels
+      description: Channels ordered by name, each with its waypoints in order (P-26).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: is_active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: A page of channels.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NavigationChannelPage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: navigationChannelsCreate
+      summary: Add a navigation channel
+      description: >-
+        The port adds as many channels as it has. A new channel is active, and must have the same `depth_datum` as every
+        berth, or 422 `errors.navigation_channels.datum_mismatch`. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreNavigationChannelRequest'
+      responses:
+        '201':
+          description: The new channel.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NavigationChannel'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/navigation-channels/{channel}:
+    put:
+      tags: [Master data]
+      operationId: navigationChannelsUpdate
+      summary: Update a navigation channel
+      description: >-
+        Changes any field; a field that is not sent keeps its value. `is_active` is 422 (`validation.prohibited`): use the
+        deactivate and activate endpoints; a channel is never deleted. Changing the `depth_datum` of an active channel needs
+        every berth to have the same datum (422).
+        A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: channel
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateNavigationChannelRequest'
+      responses:
+        '200':
+          description: The channel with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NavigationChannel'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/navigation-channels/{channel}/deactivate:
+    post:
+      tags: [Master data]
+      operationId: navigationChannelsDeactivate
+      summary: Deactivate a navigation channel
+      description: >-
+        Sets `is_active` to false. Already inactive: 200, nothing changes. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: channel
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The channel with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NavigationChannel'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/navigation-channels/{channel}/activate:
+    post:
+      tags: [Master data]
+      operationId: navigationChannelsActivate
+      summary: Activate a navigation channel
+      description: >-
+        Sets `is_active` to true; every berth must have the channel's `depth_datum`, or 422 on `depth_datum`. Already active: 200, nothing changes. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: channel
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The channel with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NavigationChannel'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/navigation-channels/{channel}/waypoints:
+    put:
+      tags: [Master data]
+      operationId: navigationChannelsReplaceWaypoints
+      summary: Save the waypoints of a channel
+      description: >-
+        Sends the whole list in travel order (P-26: add, reorder, remove). The position in the list is the
+        `sequence_order`, which the client does not send. A waypoint left out is removed; an empty list removes all.
+        Labels are unique within the channel, without case. The change moves the channel's `version`; the same list again
+        changes nothing. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: channel
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceChannelWaypointsRequest'
+      responses:
+        '200':
+          description: The channel with its waypoints and the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NavigationChannel'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/port-settings:
+    get:
+      tags: [Master data]
+      operationId: portSettingsList
+      summary: List the port settings
+      description: Settings ordered by key, for the Port Admin (P-62, DEC-12).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortSettingPage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/port-settings/{setting}:
+    put:
+      tags: [Master data]
+      operationId: portSettingsUpdate
+      summary: Change one setting's value
+      description: >-
+        Only the value changes; keys, types, limits and descriptions come from the seeds. The value must have the JSON
+        type of `value_type` (whole numbers and decimals may also be sent as text, at most 6 decimal places), stay within
+        `min` and `max`, and keep the cross-field rules (CT-18 section 4) when both keys of a rule exist:
+        `part1_min_window_minutes` is a multiple of `part1_time_step_minutes`, and `validation_result_ttl_seconds` is
+        greater than `validation_timeout_seconds`. `min_app_version` is `x.y.z`. A refused value is 422 on `value` with
+        an `errors.port_settings.*` key. The same value again changes nothing. A Bearer request needs an
+        `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: setting
+          in: path
+          required: true
+          description: The `setting_key`.
+          schema:
+            type: string
+            example: reminder_lead_minutes
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePortSettingRequest'
+      responses:
+        '200':
+          description: The setting with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortSetting'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/productivity-profiles:
+    get:
+      tags: [Master data]
+      operationId: productivityProfilesList
+      summary: List a terminal's productivity profiles
+      description: Ordered by `valid_from` (P-48). A terminal-scoped role gets 403 for another terminal.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of profiles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductivityProfilePage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: productivityProfilesCreate
+      summary: Add a productivity profile
+      description: >-
+        The Terminal Admin of a container terminal adds a profile; any other terminal is 403. Dates are whole days, both
+        included. A period that shares a day with another profile of the same terminal and `vessel_type_id` (the default,
+        null, is its own level) is 422 `errors.productivity_profiles.overlap` on `valid_from`. An inactive terminal is 409.
+        A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreProductivityProfileRequest'
+      responses:
+        '201':
+          description: The new profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductivityProfile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/productivity-profiles/{terminalProductivityProfile}:
+    put:
+      tags: [Master data]
+      operationId: productivityProfilesUpdate
+      summary: Update a productivity profile
+      description: >-
+        Changes any field; a field that is not sent keeps its value. The same overlap rule as adding. A profile is never
+        deleted: close its period with `valid_to`. A profile of another terminal is 404. 409 is a stale `version` or an
+        inactive terminal. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - name: terminalProductivityProfile
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductivityProfileRequest'
+      responses:
+        '200':
+          description: The profile with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductivityProfile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
 components:
   securitySchemes:
     cookieAuth:
@@ -1713,6 +2241,364 @@ components:
           example: '2026-12-02T10:00:00.000000Z'
         user:
           $ref: '#/components/schemas/UserProfile'
+    PortProfile:
+      type: object
+      description: The port's profile (P-26). One row per port server.
+      required: [id, public_id, port_code, governorate_code, name, latitude, longitude, timezone, boundary_coordinates, version]
+      properties:
+        id:
+          type: integer
+          example: 1
+        public_id:
+          type: string
+          format: uuid
+          description: The SaaS registry value; read-only.
+        port_code:
+          type: string
+          nullable: true
+          description: UN/LOCODE; read-only.
+          example: EGDAM
+        governorate_code:
+          type: string
+          description: ISO 3166-2:EG; read-only.
+          example: EG-DT
+        name:
+          type: string
+          example: Damietta Port
+        latitude:
+          type: number
+          example: 31.45
+        longitude:
+          type: number
+          example: 31.76
+        timezone:
+          type: string
+          description: IANA time zone.
+          example: Africa/Cairo
+        boundary_coordinates:
+          type: object
+          nullable: true
+          description: GeoJSON Polygon with [longitude, latitude] positions.
+        version:
+          type: string
+          example: '2026-11-27T10:15:04.123456Z'
+    UpdatePortProfileRequest:
+      type: object
+      required: [version]
+      properties:
+        name:
+          type: string
+          maxLength: 150
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        timezone:
+          type: string
+          maxLength: 64
+          example: Africa/Cairo
+        boundary_coordinates:
+          type: object
+          nullable: true
+          description: GeoJSON Polygon with closed rings of [longitude, latitude] positions.
+        version:
+          type: string
+          description: The `version` last read.
+    ChannelWaypoint:
+      type: object
+      required: [sequence_order, label, latitude, longitude]
+      properties:
+        sequence_order:
+          type: integer
+          minimum: 1
+        label:
+          type: string
+          maxLength: 60
+          example: Fairway Buoy
+        latitude:
+          type: number
+        longitude:
+          type: number
+    NavigationChannel:
+      type: object
+      required: [id, name, depth, depth_datum, width, speed_limit_knots, is_active, version, waypoints]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          maxLength: 100
+          example: Main Channel
+        depth:
+          type: number
+          description: Controlling charted depth in metres, below `depth_datum`.
+          example: 17.5
+        depth_datum:
+          type: string
+          maxLength: 40
+          example: LAT
+        width:
+          type: number
+          description: Metres.
+          example: 300
+        speed_limit_knots:
+          type: number
+          example: 8
+        is_active:
+          type: boolean
+          example: true
+        version:
+          type: string
+          example: '2026-11-27T10:15:04.123456Z'
+        waypoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChannelWaypoint'
+    NavigationChannelPage:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NavigationChannel'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+    StoreNavigationChannelRequest:
+      type: object
+      required: [name, depth, depth_datum, width, speed_limit_knots]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: Main Channel
+        depth:
+          type: number
+          description: Controlling charted depth in metres, below `depth_datum`.
+          example: 17.5
+        depth_datum:
+          type: string
+          maxLength: 40
+          example: LAT
+        width:
+          type: number
+          description: Metres.
+          example: 300
+        speed_limit_knots:
+          type: number
+          example: 8
+    UpdateNavigationChannelRequest:
+      type: object
+      required: [version]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: Main Channel
+        depth:
+          type: number
+          description: Controlling charted depth in metres, below `depth_datum`.
+          example: 17.5
+        depth_datum:
+          type: string
+          maxLength: 40
+          example: LAT
+        width:
+          type: number
+          description: Metres.
+          example: 300
+        speed_limit_knots:
+          type: number
+          example: 8
+        version:
+          type: string
+          description: The `version` last read.
+    ReplaceChannelWaypointsRequest:
+      type: object
+      required: [waypoints, version]
+      properties:
+        waypoints:
+          type: array
+          description: The whole list in travel order.
+          items:
+            type: object
+            required: [label, latitude, longitude]
+            properties:
+              label:
+                type: string
+                maxLength: 60
+                example: Fairway Buoy
+              latitude:
+                type: number
+                minimum: -90
+                maximum: 90
+              longitude:
+                type: number
+                minimum: -180
+                maximum: 180
+        version:
+          type: string
+          description: The channel's `version` last read.
+    PortSetting:
+      type: object
+      required: [setting_key, value_type, value, min, max, description, updated_by, version]
+      properties:
+        setting_key:
+          type: string
+          example: reminder_lead_minutes
+        value_type:
+          type: string
+          enum: [INT, DECIMAL, BOOL, STRING, JSON]
+        value:
+          description: Has the JSON type of `value_type`.
+          example: 120
+        min:
+          type: number
+          nullable: true
+        max:
+          type: number
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        updated_by:
+          type: integer
+          nullable: true
+          description: The user who last changed the value; null while it is the seeded default.
+        version:
+          type: string
+          example: '2026-11-27T10:15:04.123456Z'
+    PortSettingPage:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortSetting'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+    UpdatePortSettingRequest:
+      type: object
+      required: [value, version]
+      properties:
+        value:
+          description: The new value, with the JSON type of the setting's `value_type`.
+          example: 90
+        version:
+          type: string
+          description: The `version` last read.
+    ProductivityProfile:
+      type: object
+      required: [id, terminal_id, vessel_type_id, productivity_rate, rate_unit, fixed_overhead_minutes, valid_from, valid_to, version]
+      properties:
+        id:
+          type: integer
+        terminal_id:
+          type: integer
+        vessel_type_id:
+          type: integer
+          nullable: true
+          description: Null is the terminal's default profile.
+        productivity_rate:
+          type: number
+          description: Above 0, at most 2 decimals.
+          example: 28.5
+        rate_unit:
+          type: string
+          enum: [MOVES_PER_HOUR, TONNES_PER_HOUR, CUBIC_METRES_PER_HOUR, UNITS_PER_HOUR]
+          description: Only `MOVES_PER_HOUR` is accepted (container terminals).
+        fixed_overhead_minutes:
+          type: integer
+          minimum: 0
+          example: 90
+        valid_from:
+          type: string
+          format: date
+          example: '2027-01-01'
+        valid_to:
+          type: string
+          format: date
+          nullable: true
+          description: Included in the period; null leaves it open.
+        version:
+          type: string
+          example: '2026-11-27T10:15:04.123456Z'
+    ProductivityProfilePage:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductivityProfile'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+    StoreProductivityProfileRequest:
+      type: object
+      required: [productivity_rate, rate_unit, fixed_overhead_minutes, valid_from]
+      properties:
+        vessel_type_id:
+          type: integer
+          nullable: true
+          description: Null is the terminal's default profile.
+        productivity_rate:
+          type: number
+          description: Above 0, at most 2 decimals.
+          example: 28.5
+        rate_unit:
+          type: string
+          enum: [MOVES_PER_HOUR, TONNES_PER_HOUR, CUBIC_METRES_PER_HOUR, UNITS_PER_HOUR]
+          description: Only `MOVES_PER_HOUR` is accepted (container terminals).
+        fixed_overhead_minutes:
+          type: integer
+          minimum: 0
+          example: 90
+        valid_from:
+          type: string
+          format: date
+          example: '2027-01-01'
+        valid_to:
+          type: string
+          format: date
+          nullable: true
+          description: Included in the period; null leaves it open.
+    UpdateProductivityProfileRequest:
+      type: object
+      required: [version]
+      properties:
+        vessel_type_id:
+          type: integer
+          nullable: true
+          description: Null is the terminal's default profile.
+        productivity_rate:
+          type: number
+          description: Above 0, at most 2 decimals.
+          example: 28.5
+        rate_unit:
+          type: string
+          enum: [MOVES_PER_HOUR, TONNES_PER_HOUR, CUBIC_METRES_PER_HOUR, UNITS_PER_HOUR]
+          description: Only `MOVES_PER_HOUR` is accepted (container terminals).
+        fixed_overhead_minutes:
+          type: integer
+          minimum: 0
+          example: 90
+        valid_from:
+          type: string
+          format: date
+          example: '2027-01-01'
+        valid_to:
+          type: string
+          format: date
+          nullable: true
+          description: Included in the period; null leaves it open.
+        version:
+          type: string
+          description: The `version` last read.
     SystemInfo:
       type: object
       description: Public port information (CT-04 v1.1).
