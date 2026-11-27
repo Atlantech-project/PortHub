@@ -1522,8 +1522,8 @@ paths:
       operationId: navigationChannelsCreate
       summary: Add a navigation channel
       description: >-
-        The port adds as many channels as it has. An active channel must have the same `depth_datum` as every berth, or
-        422 `errors.navigation_channels.datum_mismatch`. A Bearer request needs an `Idempotency-Key`.
+        The port adds as many channels as it has. A new channel is active, and must have the same `depth_datum` as every
+        berth, or 422 `errors.navigation_channels.datum_mismatch`. A Bearer request needs an `Idempotency-Key`.
       security:
         - cookieAuth: []
         - bearerAuth: []
@@ -1559,8 +1559,9 @@ paths:
       operationId: navigationChannelsUpdate
       summary: Update a navigation channel
       description: >-
-        Changes any field; a field that is not sent keeps its value. `is_active` turns the channel off or on; a channel is
-        never deleted. Changing `depth_datum` or activating the channel needs every berth to have the same datum (422).
+        Changes any field; a field that is not sent keeps its value. `is_active` is 422 (`validation.prohibited`): use the
+        deactivate and activate endpoints; a channel is never deleted. Changing the `depth_datum` of an active channel needs
+        every berth to have the same datum (422).
         A Bearer request needs an `Idempotency-Key`.
       security:
         - cookieAuth: []
@@ -1598,6 +1599,96 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/navigation-channels/{channel}/deactivate:
+    post:
+      tags: [Master data]
+      operationId: navigationChannelsDeactivate
+      summary: Deactivate a navigation channel
+      description: >-
+        Sets `is_active` to false. Already inactive: 200, nothing changes. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: channel
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The channel with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NavigationChannel'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/navigation-channels/{channel}/activate:
+    post:
+      tags: [Master data]
+      operationId: navigationChannelsActivate
+      summary: Activate a navigation channel
+      description: >-
+        Sets `is_active` to true; every berth must have the channel's `depth_datum`, or 422 on `depth_datum`. Already active: 200, nothing changes. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: channel
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '200':
+          description: The channel with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NavigationChannel'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/navigation-channels/{channel}/waypoints:
@@ -2179,9 +2270,6 @@ components:
         speed_limit_knots:
           type: number
           example: 8
-        is_active:
-          type: boolean
-          example: true
     UpdateNavigationChannelRequest:
       type: object
       required: [version]
@@ -2205,9 +2293,6 @@ components:
         speed_limit_knots:
           type: number
           example: 8
-        is_active:
-          type: boolean
-          example: true
         version:
           type: string
           description: The `version` last read.
