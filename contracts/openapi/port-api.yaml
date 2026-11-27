@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.12.0'
+  version: '1.13.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -33,7 +33,7 @@ tags:
   - name: System
     description: Public port information for the mobile app (CT-04).
   - name: Master data
-    description: Terminals and berths for the port set-up (FR-MD-03 to FR-MD-05, DEC-51).
+    description: Terminals and berths for the port set-up (FR-MD-03 to FR-MD-05, DEC-51), and container terminal equipment (FR-MD-11).
   - name: Users
     description: User administration, roles and devices for the Port Admin (FR-AC-09 to FR-AC-13).
 paths:
@@ -1392,6 +1392,249 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/equipment-categories:
+    get:
+      tags: [Master data]
+      operationId: equipmentCategoriesList
+      summary: List equipment categories
+      description: >-
+        Read-only reference list (ability `port-state.read`), ordered by code. Rows come from `reference-seed.json` (CT-18).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EquipmentCategory'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/capability-types:
+    get:
+      tags: [Master data]
+      operationId: capabilityTypesList
+      summary: List capability types
+      description: >-
+        Read-only reference list (ability `port-state.read`), ordered by code. Rows come from `reference-seed.json` (CT-18).
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CapabilityType'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/equipment:
+    get:
+      tags: [Master data]
+      operationId: terminalEquipmentList
+      summary: List a terminal's equipment
+      description: >-
+        Equipment of the terminal ordered by category (ability `port-state.read`); a terminal-scoped role gets 403 for
+        another terminal (`terminal.scope`). Filter: `equipment_category_id`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: equipment_category_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: A page of equipment rows with their capabilities.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Equipment'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: terminalEquipmentCreate
+      summary: Add equipment to a container terminal
+      description: >-
+        CT Administrator of the terminal (ability `equipment.manage`, FR-MD-11). One row per category and terminal.
+        `available_quantity` is computed and refused as input. A non-container terminal is 422
+        (`errors.equipment.not_container_terminal` on `terminal`); maintenance plus blocked above the quantity is 422
+        (`errors.equipment.units_exceed_quantity`). A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT.
+        A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEquipmentRequest'
+      responses:
+        '201':
+          description: Created, with its capabilities and `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Equipment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/equipment/{equipment}:
+    get:
+      tags: [Master data]
+      operationId: terminalEquipmentShow
+      summary: Show one equipment row
+      description: >-
+        404 when the equipment does not belong to this terminal.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/EquipmentId'
+      responses:
+        '200':
+          description: The equipment row.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Equipment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    put:
+      tags: [Master data]
+      operationId: terminalEquipmentUpdate
+      summary: Update equipment quantities and capabilities
+      description: >-
+        Sends the three quantities and the full capability list, which replaces the stored one, with the `version`.
+        Sending `equipment_category_id`, `terminal_id` or `available_quantity` is 422 (`validation.prohibited`). A change
+        to the capabilities alone also gives a new `version`; when nothing changed nothing is written and the `version`
+        stays. 409 VERSION_CONFLICT for a stale `version`, 409 CONFLICT for a terminal-scoped user in an inactive terminal.
+        A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/EquipmentId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEquipmentRequest'
+      responses:
+        '200':
+          description: The equipment row with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Equipment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: >-
+            409 VERSION_CONFLICT for a stale `version` (with `current`), or 409 CONFLICT for a terminal-scoped user writing
+            in an inactive terminal.
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/system/info:
     get:
       tags: [System]
@@ -1514,6 +1757,14 @@ components:
       name: berth
       in: path
       required: true
+      schema:
+        type: integer
+        minimum: 1
+    EquipmentId:
+      name: equipment
+      in: path
+      required: true
+      description: The `id` of an equipment row of this terminal.
       schema:
         type: integer
         minimum: 1
@@ -2036,6 +2287,139 @@ components:
                 $ref: '#/components/schemas/TerminalType'
               is_active:
                 type: boolean
+    EquipmentRole:
+      type: string
+      enum: [VESSEL_HANDLING, CARGO_TRANSPORT, TRANSFER_SYSTEM]
+    CapabilityUnit:
+      type: string
+      enum: [TONNES, METRES, TONNES_PER_HOUR, CUBIC_METRES_PER_HOUR, MOVES_PER_HOUR, COUNT, BAR]
+    EquipmentCategory:
+      type: object
+      required: [id, code, name, equipment_role]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        equipment_role:
+          $ref: '#/components/schemas/EquipmentRole'
+    CapabilityType:
+      type: object
+      required: [id, code, name, unit]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        unit:
+          $ref: '#/components/schemas/CapabilityUnit'
+    Equipment:
+      type: object
+      required: [id, terminal_id, equipment_category, quantity, maintenance_quantity, blocked_quantity, available_quantity, capabilities, version]
+      properties:
+        id:
+          type: integer
+        terminal_id:
+          type: integer
+        equipment_category:
+          $ref: '#/components/schemas/EquipmentCategory'
+        quantity:
+          type: integer
+        maintenance_quantity:
+          type: integer
+        blocked_quantity:
+          type: integer
+        available_quantity:
+          type: integer
+          description: Computed by the database (quantity - maintenance - blocked); never sent.
+        capabilities:
+          type: array
+          description: Ordered by `capability_type_id`.
+          items:
+            type: object
+            required: [capability_type_id, code, name, unit, value]
+            properties:
+              capability_type_id:
+                type: integer
+              code:
+                type: string
+              name:
+                type: string
+              unit:
+                $ref: '#/components/schemas/CapabilityUnit'
+              value:
+                type: number
+        version:
+          type: string
+          description: Opaque version token; it also changes when only the capabilities change.
+    EquipmentCapabilityInput:
+      type: object
+      required: [capability_type_id, value]
+      properties:
+        capability_type_id:
+          type: integer
+          description: Each type at most once.
+        value:
+          type: number
+          minimum: 0
+          maximum: 999999999.999
+          description: At most 3 decimals, in the capability type's unit.
+    CreateEquipmentRequest:
+      type: object
+      required: [equipment_category_id, quantity, maintenance_quantity, blocked_quantity, capabilities]
+      description: maintenance_quantity + blocked_quantity may not exceed quantity.
+      properties:
+        equipment_category_id:
+          type: integer
+          description: Unique per terminal.
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 100000
+        maintenance_quantity:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        blocked_quantity:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        capabilities:
+          type: array
+          maxItems: 50
+          description: The full list; it replaces the stored one. May be empty, but must be sent.
+          items:
+            $ref: '#/components/schemas/EquipmentCapabilityInput'
+    UpdateEquipmentRequest:
+      type: object
+      required: [quantity, maintenance_quantity, blocked_quantity, capabilities, version]
+      description: maintenance_quantity + blocked_quantity may not exceed quantity.
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 100000
+        maintenance_quantity:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        blocked_quantity:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        capabilities:
+          type: array
+          maxItems: 50
+          description: The full list; it replaces the stored one. May be empty, but must be sent.
+          items:
+            $ref: '#/components/schemas/EquipmentCapabilityInput'
+        version:
+          type: string
+          description: The equipment's `version` as last read.
     CreateTerminalRequest:
       type: object
       required: [code, name, terminal_type]
