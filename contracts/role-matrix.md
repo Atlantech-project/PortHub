@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Version | v1.1 |
+| Version | v1.2 |
 | Status | Draft: for review by Frontend and QA |
 | Owner | Backend Team |
 | Reviewers | Frontend Team (FE-021, FE-022), QA (FE-102) |
@@ -39,6 +39,7 @@ Who may do what on the port API. A user holds one active role at a time (DEC-36)
 | `deviations.review` |  | yes |  |  |  |  |  |  |  |  |  |  |
 | `equipment.manage` |  |  |  |  |  |  |  |  |  | yes |  |  |
 | `yard.manage` |  |  |  |  |  |  |  |  |  | yes |  |  |
+| `yard-slot-status.update` |  |  |  |  |  |  |  |  |  | yes | yes |  |
 | `yard-recommendations.decide` |  |  |  |  |  |  |  |  |  |  | yes |  |
 | `tos-export.record` |  |  |  |  |  |  |  |  |  |  | yes |  |
 | `tasks.own.read` |  |  |  |  |  | yes |  |  | yes |  |  | yes |
@@ -56,8 +57,8 @@ Who may do what on the port API. A user holds one active role at a time (DEC-36)
 - `TUG_MANAGER`: `port-state.read`, `tug-fleet.manage`
 - `TUG_OFFICER`: `port-state.read`, `tug.assign`
 - `TUG_MASTER`: `tasks.own.read`, `tasks.own.update`
-- `TERMINAL_ADMIN`: `port-state.read`, `equipment.manage`, `yard.manage`
-- `TERMINAL_OFFICER`: `port-state.read`, `yard-recommendations.decide`, `tos-export.record`
+- `TERMINAL_ADMIN`: `port-state.read`, `equipment.manage`, `yard.manage`, `yard-slot-status.update`
+- `TERMINAL_OFFICER`: `port-state.read`, `yard-slot-status.update`, `yard-recommendations.decide`, `tos-export.record`
 - `TERMINAL_SUPERVISOR`: `tasks.own.read`, `tasks.own.update`, `terminal-status.update`
 
 ## Rules that go with the matrix
@@ -76,3 +77,4 @@ Who may do what on the port API. A user holds one active role at a time (DEC-36)
 | --- | --- | --- |
 | v1.0 | 2026-11-03 | First version: 12 roles, 27 abilities (P2-D1). `MARINE_SAFETY_OFFICER` and `storage.manage` wait for the Non-Container work. |
 | v1.1 | 2026-11-26 | 28 abilities. `MARINE_SAFETY_OFFICER` is port-wide (FRD v3, FR-MD-14; P2-D1 Q7 reversed by the lead): `port-state.read` and the new `safety-constraints.manage` (safety constraints, environmental limits, UKC parameters, tide set activation, P2-F5). `storage.manage` still waits for the Non-Container work. |
+| v1.2 | 2026-11-27 | 29 abilities. New `yard-slot-status.update` for `TERMINAL_ADMIN` and `TERMINAL_OFFICER`: block or unblock yard slots and stacks of their own terminal (DEC-29 rule 11, P2-F4). Changing the yard structure stays with `yard.manage`. |
