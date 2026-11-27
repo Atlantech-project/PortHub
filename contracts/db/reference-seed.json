@@ -1,5 +1,5 @@
 {
-  "spec_version": "1.0",
+  "spec_version": "1.1",
   "imdg_classes": [
     {
       "code": "1.1",
@@ -279,6 +279,11 @@
       "code": "OOG",
       "name": "Out of gauge",
       "zone_detail": "OOG"
+    },
+    {
+      "code": "EMPTY",
+      "name": "Empty containers",
+      "zone_detail": "NONE"
     }
   ],
   "storage_types": [

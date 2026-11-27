@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.13.0'
+  version: '1.14.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -33,7 +33,7 @@ tags:
   - name: System
     description: Public port information for the mobile app (CT-04).
   - name: Master data
-    description: Terminals and berths for the port set-up (FR-MD-03 to FR-MD-05, DEC-51), and container terminal equipment (FR-MD-11).
+    description: Terminals and berths for the port set-up (FR-MD-03 to FR-MD-05, DEC-51), container terminal equipment (FR-MD-11) and the container yard (FR-MD-12).
   - name: Users
     description: User administration, roles and devices for the Port Admin (FR-AC-09 to FR-AC-13).
 paths:
@@ -1635,6 +1635,844 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/yard-zone-types:
+    get:
+      tags: [Master data]
+      operationId: yardZoneTypesList
+      summary: List yard zone types
+      description: >-
+        Read-only reference list (ability `port-state.read`), ordered by code. Rows come from `reference-seed.json` (CT-18); `zone_detail` says which detail a zone of the type needs.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/YardZoneType'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/imdg-classes:
+    get:
+      tags: [Master data]
+      operationId: imdgClassesList
+      summary: List IMDG classes
+      description: >-
+        Read-only reference list (ability `port-state.read`), ordered by code. A dangerous goods zone lists the classes it allows by code.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ImdgClass'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/yards:
+    get:
+      tags: [Master data]
+      operationId: terminalYardsList
+      summary: List a terminal's container yards
+      description: >-
+        Ordered by code (ability `port-state.read`). A terminal-scoped role gets 403 for another terminal; a record of another terminal is 404.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of container yards.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContainerYard'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: terminalYardsCreate
+      summary: Create a container yard
+      description: >-
+        CT Administrator of the terminal (ability `yard.manage`, P2-F4 Q1). A container yard has no capacity of its own: it is counted from its slots, so `capacity` is refused. The code is unique per terminal. A non-container terminal is 422 (`errors.yard.not_container_terminal` on `terminal`). A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContainerYardRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainerYard'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/yards/{containerYard}:
+    get:
+      tags: [Master data]
+      operationId: terminalYardsShow
+      summary: Show a container yard
+      description: >-
+        A terminal-scoped role gets 403 for another terminal; a record of another terminal is 404.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/ContainerYardId'
+      responses:
+        '200':
+          description: The container yard.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainerYard'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    put:
+      tags: [Master data]
+      operationId: terminalYardsUpdate
+      summary: Update a container yard
+      description: >-
+        A field that is not sent keeps its value. A yard is never deleted; set `status` to INACTIVE instead. A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/ContainerYardId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateContainerYardRequest'
+      responses:
+        '200':
+          description: The yard with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainerYard'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: >-
+            409 VERSION_CONFLICT for a stale `version`, or 409 CONFLICT for an inactive terminal.
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/yards/{containerYard}/zones:
+    get:
+      tags: [Master data]
+      operationId: yardZonesList
+      summary: List a yard's zones
+      description: >-
+        Ordered by code, each with its detail and its capacity counted from the slots. A terminal-scoped role gets 403 for another terminal; a record of another terminal is 404.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/ContainerYardId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of zones.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/YardZone'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: yardZonesCreate
+      summary: Create a yard zone
+      description: >-
+        Ability `yard.manage`. The detail fields depend on the `zone_detail` of the zone type: REEFER needs `total_power_plugs` and `power_type` (may be null); DANGEROUS_GOODS needs `imdg_classes`; OOG needs the four limits (each may be null); the fields of another kind are refused. The code is unique per yard. A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/ContainerYardId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateYardZoneRequest'
+      responses:
+        '201':
+          description: Created, with its detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YardZone'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/yard-zones/{yardZone}:
+    get:
+      tags: [Master data]
+      operationId: yardZonesShow
+      summary: Show a yard zone
+      description: >-
+        A terminal-scoped role gets 403 for another terminal; a record of another terminal is 404.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardZoneId'
+      responses:
+        '200':
+          description: The zone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YardZone'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    put:
+      tags: [Master data]
+      operationId: yardZonesUpdate
+      summary: Update a yard zone
+      description: >-
+        Sends the code and the full detail of the zone kind; the zone type never changes (`yard_zone_type_id` is refused). A change to the detail alone also gives a new `version`. A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardZoneId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateYardZoneRequest'
+      responses:
+        '200':
+          description: The zone with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YardZone'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: >-
+            409 VERSION_CONFLICT for a stale `version`, or 409 CONFLICT for an inactive terminal.
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    delete:
+      tags: [Master data]
+      operationId: yardZonesDelete
+      summary: Delete an empty yard zone
+      description: >-
+        Only a zone without blocks, and only while no yard run of the terminal is QUEUED or RUNNING; otherwise 409 CONFLICT (`errors.yard.zone_has_blocks` or `errors.yard.run_in_progress`). Its detail rows go with it. A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardZoneId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '204':
+          description: Deleted.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: >-
+            409 VERSION_CONFLICT for a stale `version`, or 409 CONFLICT when the zone is still used.
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/yard-zones/{yardZone}/blocks:
+    get:
+      tags: [Master data]
+      operationId: yardBlocksList
+      summary: List a zone's blocks
+      description: >-
+        Ordered by code, each with its size counted from its slots. A terminal-scoped role gets 403 for another terminal; a record of another terminal is 404.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardZoneId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of blocks.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/YardBlock'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: yardBlocksCreate
+      summary: Create a yard block
+      description: >-
+        Ability `yard.manage`. The block starts with no slots; set its size with `PUT .../layout`. The code is unique per zone. A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardZoneId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateYardBlockRequest'
+      responses:
+        '201':
+          description: Created, with no slots.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YardBlock'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/yard-blocks/{yardBlock}:
+    get:
+      tags: [Master data]
+      operationId: yardBlocksShow
+      summary: Show a yard block
+      description: >-
+        A terminal-scoped role gets 403 for another terminal; a record of another terminal is 404.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardBlockId'
+      responses:
+        '200':
+          description: The block.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YardBlock'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    put:
+      tags: [Master data]
+      operationId: yardBlocksUpdate
+      summary: Rename a yard block
+      description: >-
+        The code only; the size has its own endpoint. A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardBlockId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateYardBlockRequest'
+      responses:
+        '200':
+          description: The block with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YardBlock'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: >-
+            409 VERSION_CONFLICT for a stale `version`, or 409 CONFLICT for an inactive terminal.
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    delete:
+      tags: [Master data]
+      operationId: yardBlocksDelete
+      summary: Delete a yard block with its slots
+      description: >-
+        Removes the block and its slots when every slot is removable: no container, not BLOCKED, not used by a yard placement, and no yard run of the terminal QUEUED or RUNNING. Otherwise 409 CONFLICT (`errors.yard.slots_in_use` or `errors.yard.run_in_progress`) and nothing changes. A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardBlockId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRequest'
+      responses:
+        '204':
+          description: Deleted with its slots.
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: >-
+            409 VERSION_CONFLICT for a stale `version`, or 409 CONFLICT when a slot cannot be removed.
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/yard-blocks/{yardBlock}/layout:
+    put:
+      tags: [Master data]
+      operationId: yardBlocksLayout
+      summary: Set the size of a yard block
+      description: >-
+        A regular block of `bays` x `rows` x `tiers` slots, at most 5000 (DEC-29 G-03). Missing slots are added as ACTIVE, extra ones removed, kept slots not touched. Removing is refused with 409 CONFLICT, and nothing changes, when an extra slot holds a container, is BLOCKED or is used by a yard placement (`errors.yard.slots_in_use`), or while a yard run of the terminal is QUEUED or RUNNING (`errors.yard.run_in_progress`). Growing is always allowed. A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardBlockId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YardBlockLayoutRequest'
+      responses:
+        '200':
+          description: The block with its new size and `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YardBlock'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: >-
+            409 VERSION_CONFLICT for a stale `version`, or 409 CONFLICT when a slot cannot be removed.
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/yard-blocks/{yardBlock}/slots:
+    get:
+      tags: [Master data]
+      operationId: yardSlotsList
+      summary: List a block's slots
+      description: >-
+        Ordered by bay, row and tier. A terminal-scoped role gets 403 for another terminal; a record of another terminal is 404.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardBlockId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: bay
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: row_no
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: tier
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/YardSlotStatus'
+      responses:
+        '200':
+          description: A page of slots.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/YardSlot'
+                  meta:
+                    $ref: '#/components/schemas/PageMeta'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/yard-blocks/{yardBlock}/stack-status:
+    post:
+      tags: [Master data]
+      operationId: yardStackStatus
+      summary: Block or unblock a whole stack
+      description: >-
+        Ability `yard-slot-status.update` (CT Administrator or CT Operation Planner of the terminal, DEC-29 rule 11): every tier of one bay and row gets the status. All or none: if one slot holds a container, BLOCKED is refused with 409 CONFLICT (`errors.yard.slot_occupied`). A bay and row with no slot is 422. No version: sending the same status again changes nothing. A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardBlockId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/YardStackStatusRequest'
+      responses:
+        '200':
+          description: Every slot of the stack, ordered by tier.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/YardSlot'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/yard-slots/{yardSlot}:
+    put:
+      tags: [Master data]
+      operationId: yardSlotsUpdate
+      summary: Block or unblock one slot
+      description: >-
+        Ability `yard-slot-status.update`. The status only: `container_id` and the position are refused. A slot that holds a container cannot be BLOCKED (409 CONFLICT, `errors.yard.slot_occupied`). A terminal-scoped user writing in an inactive terminal gets 409 CONFLICT. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/YardSlotId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateYardSlotRequest'
+      responses:
+        '200':
+          description: The slot with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YardSlot'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: >-
+            409 VERSION_CONFLICT for a stale `version`, or 409 CONFLICT for an occupied slot or an inactive terminal.
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/VersionConflictProblem'
+                  - $ref: '#/components/schemas/Problem'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
   /api/v1/system/info:
     get:
       tags: [System]
@@ -1765,6 +2603,38 @@ components:
       in: path
       required: true
       description: The `id` of an equipment row of this terminal.
+      schema:
+        type: integer
+        minimum: 1
+    ContainerYardId:
+      name: containerYard
+      in: path
+      required: true
+      description: The `id` of a container yard of this terminal.
+      schema:
+        type: integer
+        minimum: 1
+    YardZoneId:
+      name: yardZone
+      in: path
+      required: true
+      description: The `id` of a yard zone of this terminal.
+      schema:
+        type: integer
+        minimum: 1
+    YardBlockId:
+      name: yardBlock
+      in: path
+      required: true
+      description: The `id` of a yard block of this terminal.
+      schema:
+        type: integer
+        minimum: 1
+    YardSlotId:
+      name: yardSlot
+      in: path
+      required: true
+      description: The `id` of a yard slot of this terminal.
       schema:
         type: integer
         minimum: 1
@@ -2420,6 +3290,396 @@ components:
         version:
           type: string
           description: The equipment's `version` as last read.
+    ZoneDetail:
+      type: string
+      enum: [NONE, REEFER, DANGEROUS_GOODS, OOG]
+    YardSlotStatus:
+      type: string
+      description: Administrative only; a recorded container is shown by `occupied`.
+      enum: [ACTIVE, BLOCKED]
+    FacilityStatus:
+      type: string
+      enum: [ACTIVE, MAINTENANCE, INACTIVE]
+    YardZoneType:
+      type: object
+      required: [id, code, name, zone_detail]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        zone_detail:
+          $ref: '#/components/schemas/ZoneDetail'
+    ImdgClass:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+    ContainerYard:
+      type: object
+      required: [id, terminal_id, code, name, status, area, max_floor_load, latitude, longitude, version]
+      properties:
+        id:
+          type: integer
+        terminal_id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        status:
+          $ref: '#/components/schemas/FacilityStatus'
+        area:
+          type: number
+          nullable: true
+        max_floor_load:
+          type: number
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        version:
+          type: string
+          description: Opaque version token; send it back with every update.
+    YardZone:
+      type: object
+      required: [id, container_yard_id, code, zone_type, zone_detail, detail, blocks_count, capacity, version]
+      properties:
+        id:
+          type: integer
+        container_yard_id:
+          type: integer
+        code:
+          type: string
+        zone_type:
+          type: object
+          required: [id, code, name]
+          properties:
+            id:
+              type: integer
+            code:
+              type: string
+            name:
+              type: string
+        zone_detail:
+          $ref: '#/components/schemas/ZoneDetail'
+        detail:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: >-
+            Null for NONE. REEFER: total_power_plugs, power_type. DANGEROUS_GOODS: imdg_classes. OOG: max_length,
+            max_width, max_height, max_weight (each may be null).
+        blocks_count:
+          type: integer
+        capacity:
+          type: object
+          required: [slots, blocked, occupied]
+          description: Counted from the slots of the zone, never stored.
+          properties:
+            slots:
+              type: integer
+            blocked:
+              type: integer
+            occupied:
+              type: integer
+        version:
+          type: string
+          description: Opaque version token; it also changes when only the detail changes.
+    YardBlock:
+      type: object
+      required: [id, yard_zone_id, code, bays, rows, tiers, slots_count, version]
+      properties:
+        id:
+          type: integer
+        yard_zone_id:
+          type: integer
+        code:
+          type: string
+        bays:
+          type: integer
+          description: Counted from the slots; 0 for a block with no slots.
+        rows:
+          type: integer
+        tiers:
+          type: integer
+        slots_count:
+          type: integer
+        version:
+          type: string
+          description: Opaque version token; it also changes when the size changes.
+    YardSlot:
+      type: object
+      required: [id, yard_block_id, bay, row_no, tier, status, occupied, version]
+      properties:
+        id:
+          type: integer
+        yard_block_id:
+          type: integer
+        bay:
+          type: integer
+        row_no:
+          type: integer
+        tier:
+          type: integer
+        status:
+          $ref: '#/components/schemas/YardSlotStatus'
+        occupied:
+          type: boolean
+          description: True when a container is recorded in the slot (not written by this API).
+        version:
+          type: string
+    CreateContainerYardRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          maxLength: 30
+          description: Unique per terminal.
+        name:
+          type: string
+          maxLength: 100
+        area:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999999999.99
+          description: m2
+        max_floor_load:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999.99
+          description: tonnes per m2
+        status:
+          $ref: '#/components/schemas/FacilityStatus'
+        latitude:
+          type: number
+          nullable: true
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          nullable: true
+          minimum: -180
+          maximum: 180
+    UpdateContainerYardRequest:
+      type: object
+      required: [version]
+      properties:
+        code:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 100
+        area:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999999999.99
+          description: m2
+        max_floor_load:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999.99
+          description: tonnes per m2
+        status:
+          $ref: '#/components/schemas/FacilityStatus'
+        latitude:
+          type: number
+          nullable: true
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          nullable: true
+          minimum: -180
+          maximum: 180
+        version:
+          type: string
+          description: The yard's `version` as last read.
+    CreateYardZoneRequest:
+      type: object
+      required: [yard_zone_type_id, code]
+      properties:
+        yard_zone_type_id:
+          type: integer
+        code:
+          type: string
+          maxLength: 30
+          description: Unique per yard.
+        total_power_plugs:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: REEFER zones only.
+        power_type:
+          type: string
+          nullable: true
+          maxLength: 30
+          description: REEFER zones only.
+        imdg_classes:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          description: DANGEROUS_GOODS zones only; IMDG class codes, each at most once.
+        max_length:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999.99
+          description: OOG zones only, m.
+        max_width:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999.99
+          description: OOG zones only, m.
+        max_height:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999.99
+          description: OOG zones only, m.
+        max_weight:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 999999.99
+          description: OOG zones only, tonnes.
+    UpdateYardZoneRequest:
+      type: object
+      required: [code, version]
+      properties:
+        code:
+          type: string
+          maxLength: 30
+        total_power_plugs:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          description: REEFER zones only.
+        power_type:
+          type: string
+          nullable: true
+          maxLength: 30
+          description: REEFER zones only.
+        imdg_classes:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          description: DANGEROUS_GOODS zones only; IMDG class codes, each at most once.
+        max_length:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999.99
+          description: OOG zones only, m.
+        max_width:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999.99
+          description: OOG zones only, m.
+        max_height:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 9999.99
+          description: OOG zones only, m.
+        max_weight:
+          type: number
+          nullable: true
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 999999.99
+          description: OOG zones only, tonnes.
+        version:
+          type: string
+          description: The zone's `version` as last read.
+    CreateYardBlockRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          maxLength: 30
+          description: Unique per zone.
+    UpdateYardBlockRequest:
+      type: object
+      required: [code, version]
+      properties:
+        code:
+          type: string
+          maxLength: 30
+        version:
+          type: string
+          description: The block's `version` as last read.
+    YardBlockLayoutRequest:
+      type: object
+      required: [bays, rows, tiers, version]
+      description: bays x rows x tiers may not exceed 5000.
+      properties:
+        bays:
+          type: integer
+          minimum: 1
+          maximum: 200
+        rows:
+          type: integer
+          minimum: 1
+          maximum: 200
+        tiers:
+          type: integer
+          minimum: 1
+          maximum: 20
+        version:
+          type: string
+          description: The block's `version` as last read.
+    YardStackStatusRequest:
+      type: object
+      required: [bay, row_no, status]
+      properties:
+        bay:
+          type: integer
+          minimum: 1
+        row_no:
+          type: integer
+          minimum: 1
+        status:
+          $ref: '#/components/schemas/YardSlotStatus'
+    UpdateYardSlotRequest:
+      type: object
+      required: [status, version]
+      properties:
+        status:
+          $ref: '#/components/schemas/YardSlotStatus'
+        version:
+          type: string
+          description: The slot's `version` as last read.
     CreateTerminalRequest:
       type: object
       required: [code, name, terminal_type]
