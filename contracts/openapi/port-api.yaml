@@ -8,7 +8,7 @@
 openapi: 3.0.3
 info:
   title: ATLANTECH Port API
-  version: '1.13.0'
+  version: '1.14.0'
   description: |
     The port API used by the web app (Vue) and the mobile app (Flutter).
 
@@ -1819,6 +1819,127 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '426':
           $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/productivity-profiles:
+    get:
+      tags: [Master data]
+      operationId: productivityProfilesList
+      summary: List a terminal's productivity profiles
+      description: Ordered by `valid_from` (P-48). A terminal-scoped role gets 403 for another terminal.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: A page of profiles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductivityProfilePage'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+    post:
+      tags: [Master data]
+      operationId: productivityProfilesCreate
+      summary: Add a productivity profile
+      description: >-
+        The Terminal Admin of a container terminal adds a profile; any other terminal is 403. Dates are whole days, both
+        included. A period that shares a day with another profile of the same terminal and `vessel_type_id` (the default,
+        null, is its own level) is 422 `errors.productivity_profiles.overlap` on `valid_from`. An inactive terminal is 409.
+        A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreProductivityProfileRequest'
+      responses:
+        '201':
+          description: The new profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductivityProfile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
+  /api/v1/terminals/{terminal}/productivity-profiles/{terminalProductivityProfile}:
+    put:
+      tags: [Master data]
+      operationId: productivityProfilesUpdate
+      summary: Update a productivity profile
+      description: >-
+        Changes any field; a field that is not sent keeps its value. The same overlap rule as adding. A profile is never
+        deleted: close its period with `valid_to`. A profile of another terminal is 404. 409 is a stale `version` or an
+        inactive terminal. A Bearer request needs an `Idempotency-Key`.
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TerminalId'
+        - name: terminalProductivityProfile
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/XsrfTokenWebOnly'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductivityProfileRequest'
+      responses:
+        '200':
+          description: The profile with the new `version`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductivityProfile'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '419':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '426':
+          $ref: '#/components/responses/AppUpdateRequired'
 components:
   securitySchemes:
     cookieAuth:
@@ -2368,6 +2489,113 @@ components:
         value:
           description: The new value, with the JSON type of the setting's `value_type`.
           example: 90
+        version:
+          type: string
+          description: The `version` last read.
+    ProductivityProfile:
+      type: object
+      required: [id, terminal_id, vessel_type_id, productivity_rate, rate_unit, fixed_overhead_minutes, valid_from, valid_to, version]
+      properties:
+        id:
+          type: integer
+        terminal_id:
+          type: integer
+        vessel_type_id:
+          type: integer
+          nullable: true
+          description: Null is the terminal's default profile.
+        productivity_rate:
+          type: number
+          description: Above 0, at most 2 decimals.
+          example: 28.5
+        rate_unit:
+          type: string
+          enum: [MOVES_PER_HOUR, TONNES_PER_HOUR, CUBIC_METRES_PER_HOUR, UNITS_PER_HOUR]
+          description: Only `MOVES_PER_HOUR` is accepted (container terminals).
+        fixed_overhead_minutes:
+          type: integer
+          minimum: 0
+          example: 90
+        valid_from:
+          type: string
+          format: date
+          example: '2027-01-01'
+        valid_to:
+          type: string
+          format: date
+          nullable: true
+          description: Included in the period; null leaves it open.
+        version:
+          type: string
+          example: '2026-11-27T10:15:04.123456Z'
+    ProductivityProfilePage:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductivityProfile'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+    StoreProductivityProfileRequest:
+      type: object
+      required: [productivity_rate, rate_unit, fixed_overhead_minutes, valid_from]
+      properties:
+        vessel_type_id:
+          type: integer
+          nullable: true
+          description: Null is the terminal's default profile.
+        productivity_rate:
+          type: number
+          description: Above 0, at most 2 decimals.
+          example: 28.5
+        rate_unit:
+          type: string
+          enum: [MOVES_PER_HOUR, TONNES_PER_HOUR, CUBIC_METRES_PER_HOUR, UNITS_PER_HOUR]
+          description: Only `MOVES_PER_HOUR` is accepted (container terminals).
+        fixed_overhead_minutes:
+          type: integer
+          minimum: 0
+          example: 90
+        valid_from:
+          type: string
+          format: date
+          example: '2027-01-01'
+        valid_to:
+          type: string
+          format: date
+          nullable: true
+          description: Included in the period; null leaves it open.
+    UpdateProductivityProfileRequest:
+      type: object
+      required: [version]
+      properties:
+        vessel_type_id:
+          type: integer
+          nullable: true
+          description: Null is the terminal's default profile.
+        productivity_rate:
+          type: number
+          description: Above 0, at most 2 decimals.
+          example: 28.5
+        rate_unit:
+          type: string
+          enum: [MOVES_PER_HOUR, TONNES_PER_HOUR, CUBIC_METRES_PER_HOUR, UNITS_PER_HOUR]
+          description: Only `MOVES_PER_HOUR` is accepted (container terminals).
+        fixed_overhead_minutes:
+          type: integer
+          minimum: 0
+          example: 90
+        valid_from:
+          type: string
+          format: date
+          example: '2027-01-01'
+        valid_to:
+          type: string
+          format: date
+          nullable: true
+          description: Included in the period; null leaves it open.
         version:
           type: string
           description: The `version` last read.
